@@ -1,19 +1,22 @@
 //! Samuel Benwellonedge Mukandara Universal Meta-Compiler (SBMUMC)
 //!
-//! A comprehensive AGI system and universal compiler framework designed to:
+//! A comprehensive sovereign AGI system and universal compiler framework designed for:
 //! - Compile everything from grammar files to programming languages
 //! - Provide meta-compiler capabilities
 //! - Support sovereign OS development
 //! - Ensure AI safety and control
 //! - Enable human-AI collaboration
+//! - Operate offline on device
+//! - Integrate with existing and future software
 //!
-//! # Architecture
-//!
-//! The system is organized into the following core modules:
+//! # Architecture - 82-File GUARDIAN/GSTM INFINITY System
 //!
 //! ## Core System
 //! - [`cortex`] - Central processing unit for information handling
 //! - [`core`] - Essential system components and utilities
+//!
+//! ## Offline & Connectivity
+//! - [`core::offline`] - Offline operation with edge AI inference
 //!
 //! ## Knowledge & Reasoning
 //! - [`knowledge`] - Knowledge representation and graph management
@@ -21,6 +24,10 @@
 //!
 //! ## Learning Systems
 //! - [`learning`] - Meta-learning, active learning, and self-supervised learning
+//!
+//! ## Chatbot & UI
+//! - [`chatbot`] - Sovereign chatbot interface
+//! - [`ui`] - Adaptive fluidic UI framework
 //!
 //! ## Input/Output
 //! - [`io`] - Multi-modal input/output handling
@@ -39,13 +46,33 @@
 //! ## Compilation
 //! - [`compiler`] - Universal meta-compiler framework
 //!
+//! ## Integration
+//! - [`integration`] - Software integration framework (plugins, APIs, IDE)
+//!
+//! ## Pillar I: Ghost Mesh (Files 01-37)
+//! - [`ghost`] - Quantum sharding, self-healing, PUF binding
+//!
+//! ## Pillar II: Defense (Files 38-54)
+//! - [`defense`] - Brand rotation, agency invoicing, counter-intelligence
+//!
+//! ## Pillar III: Prestige (Files 55-62)
+//! - [`prestige`] - Obsidian tier, bio-fusion, concierge service
+//!
+//! ## Pillar IV: Linguistic Sentinel (Files 63-70)
+//! - [`sentinel`] - Hyper-polyglot, Shona dialects, cultural adaptation
+//!
+//! ## Pillar V: Diplomatic Compliance (Files 71-82)
+//! - [`diplomacy`] - Mirror compliance, ethics charter, legal documentation
+//!
 //! # Design Principles
 //!
 //! 1. **Program-Once-Compile-Run-Everywhere**: Cross-platform compilation targets
 //! 2. **Sovereign AGI**: Self-controlled, explainable AI behavior
 //! 3. **Human Safety First**: Prioritizing human well-being in all decisions
-//! 4. **Cultural Adaptation**: Region-aware behavior and responses
+//! 4. **Cultural Adaptation**: Region-aware behavior and responses (Chishona Chakadzama)
 //! 5. **Zero-Knowledge Initialization**: Starting from minimal pre-programmed knowledge
+//! 6. **Offline-First**: Operate entirely without internet connectivity
+//! 7. **Polymorphic Sovereignty**: Self-sharding to avoid detection/banning
 
 // ============================================================================
 // CORE MODULES
@@ -53,6 +80,14 @@
 
 pub mod cortex;
 pub mod core;
+
+// ============================================================================
+// OFFLINE OPERATION
+// ============================================================================
+
+pub mod offline {
+    pub use crate::core::offline::*;
+}
 
 // ============================================================================
 // KNOWLEDGE & REASONING
@@ -66,6 +101,13 @@ pub mod reasoning;
 // ============================================================================
 
 pub mod learning;
+
+// ============================================================================
+// CHATBOT & UI
+// ============================================================================
+
+pub mod chatbot;
+pub mod ui;
 
 // ============================================================================
 // INPUT/OUTPUT
@@ -100,21 +142,98 @@ pub mod agi;
 pub mod ethics;
 
 // ============================================================================
+// INTEGRATION
+// ============================================================================
+
+pub mod integration;
+
+// ============================================================================
+// PILLAR I: GHOST MESH (Files 01-37)
+// ============================================================================
+
+pub mod ghost;
+
+// ============================================================================
+// PILLAR II: DEFENSE (Files 38-54)
+// ============================================================================
+
+pub mod defense;
+
+// ============================================================================
+// PILLAR III: PRESTIGE (Files 55-62)
+// ============================================================================
+
+pub mod prestige;
+
+// ============================================================================
+// PILLAR IV: LINGUISTIC SENTINEL (Files 63-70)
+// ============================================================================
+
+pub mod sentinel;
+
+// ============================================================================
+// PILLAR V: DIPLOMATIC COMPLIANCE (Files 71-82)
+// ============================================================================
+
+pub mod diplomacy;
+
+// ============================================================================
 // RE-EXPORTS FOR CONVENIENCE
 // ============================================================================
 
+// Core system
 pub use cortex::Cortex;
 pub use core::{Sbmumc, SbmumcConfig};
+
+// Knowledge & reasoning
 pub use knowledge::{KnowledgeGraph, KnowledgeNode};
 pub use reasoning::{Planner, Reasoner};
+
+// Learning
 pub use learning::{MetaLearner, SelfSupervisedLearner};
+
+// Security
 pub use security::{SecurityLayer, IntrusionDetector};
+
+// I/O
 pub use io::{InputHandler, OutputHandler};
 pub use language::{NlpEngine, Translator};
+
+// Admin
 pub use admin::{AdminInterface, DocumentCompiler};
+
+// Compiler
 pub use compiler::{MetaCompiler, GrammarCompiler, LanguageCompiler};
+
+// AGI
 pub use agi::{AgiEngine, SelfAwareness, TheoryOfMind, EmotionalIntelligence, CommonSenseKB, ImaginationEngine};
+
+// Ethics
 pub use ethics::{EthicalFramework, HumanValuesAlignment, CulturalAdaptation, SafetyConstraints};
+
+// Chatbot
+pub use chatbot::{SovereignChatbot, ChatResponse, AccessTier};
+
+// UI
+pub use ui::{FluidicUIEngine, UITier, Theme};
+
+// Integration
+pub use integration::{IntegrationEngine, PluginType, ApiGateway};
+
+// Ghost Mesh
+pub use ghost::{GhostMesh, GhostNode, NodeStatus, EncryptionLevel};
+
+// Defense
+pub use defense::{DefenseEngine, BrandManager, AgencyInvoicing, ThreatLevel};
+
+// Prestige
+pub use prestige::{PrestigeEngine, TierLevel, BioFusionEngine, ConciergeService};
+
+// Sentinel
+pub use sentinel::{LinguisticSentinel, FormalRegister, DialectRegistry};
+
+// Diplomacy
+pub use diplomacy::{DiplomaticEngine, ComplianceStatus, LegalFramework};
 
 // ============================================================================
 // RE-EXPORTS FOR COMMON TYPES
@@ -126,8 +245,14 @@ pub use core::types::*;
 /// SBMUMC library version
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 
-/// System name
-pub const SYSTEM_NAME: &str = "Samuel Benwellonedge Mukandara Universal Meta-Compiler";
+/// System name - GUARDIAN (Public) / GSTM INFINITY (Core)
+pub const SYSTEM_NAME: &str = "Samuel Benwellonedge Mukandara Universal Meta-Compiler (GSTM INFINITY)";
+
+/// Guardian public name
+pub const GUARDIAN_NAME: &str = "GUARDIAN";
+
+/// The Benwellonedge Protocol spiritual anchor
+pub const SPIRITUAL_DIRECTIVE: &str = "Kubviswa naMwari mune zvakaipa uchiiswa munezvakanaka";
 
 /// Initialize the tracing/logging system
 pub fn init_tracing() {
@@ -140,4 +265,19 @@ pub fn init_tracing() {
         .with(fmt::layer())
         .with(filter)
         .init();
+}
+
+/// Initialize the complete GSTM INFINITY system
+pub async fn init_system() -> Result<Sbmumc> {
+    init_tracing();
+    info!("Initializing GSTM INFINITY - {}", SYSTEM_NAME);
+    info!("Spiritual Directive: {}", SPIRITUAL_DIRECTIVE);
+
+    let config = SbmumcConfig::default();
+    let system = Sbmumc::new(config).await?;
+
+    info!("GSTM INFINITY System Ready");
+    info!("Mwari vave nemi, Changamire.");
+
+    Ok(system)
 }
