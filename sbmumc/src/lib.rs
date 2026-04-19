@@ -30,6 +30,12 @@
 //! - [`security`] - Layered security and intrusion detection
 //! - [`admin`] - Administration interface
 //!
+//! ## AGI Capabilities
+//! - [`agi`] - Self-awareness, theory of mind, emotional intelligence
+//!
+//! ## Ethics & Values
+//! - [`ethics`] - Ethical frameworks, human values alignment, cultural adaptation
+//!
 //! ## Compilation
 //! - [`compiler`] - Universal meta-compiler framework
 //!
@@ -82,6 +88,18 @@ pub mod admin;
 pub mod compiler;
 
 // ============================================================================
+// AGI CAPABILITIES
+// ============================================================================
+
+pub mod agi;
+
+// ============================================================================
+// ETHICS & VALUES
+// ============================================================================
+
+pub mod ethics;
+
+// ============================================================================
 // RE-EXPORTS FOR CONVENIENCE
 // ============================================================================
 
@@ -95,6 +113,8 @@ pub use io::{InputHandler, OutputHandler};
 pub use language::{NlpEngine, Translator};
 pub use admin::{AdminInterface, DocumentCompiler};
 pub use compiler::{MetaCompiler, GrammarCompiler, LanguageCompiler};
+pub use agi::{AgiEngine, SelfAwareness, TheoryOfMind, EmotionalIntelligence, CommonSenseKB, ImaginationEngine};
+pub use ethics::{EthicalFramework, HumanValuesAlignment, CulturalAdaptation, SafetyConstraints};
 
 // ============================================================================
 // RE-EXPORTS FOR COMMON TYPES
