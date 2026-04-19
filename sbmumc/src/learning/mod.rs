@@ -5,12 +5,18 @@
 //! - Active learning: Learning by asking questions
 //! - Self-supervised learning: Learning from self-generated labels
 //! - Continual learning: Learning without forgetting
+//! - 3000+ Learning and Compilation Techniques
 
 use crate::core::{SbmumcError, Result, EntityId, PropertyValue};
 use std::collections::{HashMap, VecDeque, HashSet};
 use parking_lot::RwLock;
 use std::sync::Arc;
 use tracing::{debug, info};
+use serde::{Serialize, Deserialize};
+
+// ============================================================================
+// META-LEARNER - Learns how to learn
+// ============================================================================
 
 /// Meta-Learner - Learns how to learn
 pub struct MetaLearner {
@@ -38,7 +44,7 @@ pub struct LearningStrategy {
     pub description: String,
     pub hyperparameters: HashMap<String, f64>,
     pub success_rate: f64,
-    pub适用场景: Vec<String>,
+    pub applicable_scenarios: Vec<String>,
 }
 
 /// Performance record
@@ -97,7 +103,7 @@ impl MetaLearner {
             description: "Standard gradient-based optimization".to_string(),
             hyperparameters: HashMap::new(),
             success_rate: 0.8,
-           适用场景: vec!["optimization".to_string(), "prediction".to_string()],
+            applicable_scenarios: vec!["optimization".to_string(), "prediction".to_string()],
         });
 
         strategies.push(LearningStrategy {
@@ -106,7 +112,7 @@ impl MetaLearner {
             description: "Learn from rewards and penalties".to_string(),
             hyperparameters: HashMap::new(),
             success_rate: 0.75,
-           适用场景: vec!["control".to_string(), "decision_making".to_string()],
+            applicable_scenarios: vec!["control".to_string(), "decision_making".to_string()],
         });
 
         strategies.push(LearningStrategy {
@@ -115,7 +121,7 @@ impl MetaLearner {
             description: "Learn driven by intrinsic curiosity".to_string(),
             hyperparameters: HashMap::new(),
             success_rate: 0.7,
-           适用场景: vec!["exploration".to_string(), "discovery".to_string()],
+            applicable_scenarios: vec!["exploration".to_string(), "discovery".to_string()],
         });
 
         Ok(Self {
@@ -135,32 +141,26 @@ impl MetaLearner {
         let applicable: Vec<&LearningStrategy> = self
             .strategies
             .iter()
-            .filter(|s| s.适用场景.iter().any(|t| t == task_type))
+            .filter(|s| s.applicable_scenarios.iter().any(|t| t == task_type))
             .collect();
 
         if applicable.is_empty() {
-            // Fallback to first strategy
             return self.strategies.first().cloned().ok_or_else(|| {
                 SbmumcError::Learning("No learning strategies available".to_string())
             });
         }
 
-        // Use exploration vs exploitation
         let use_exploration = rand_simple() < self.config.exploration_rate;
 
         if use_exploration {
-            // Random selection for exploration
             let idx = (rand_simple() * applicable.len() as f64) as usize;
             return Ok(applicable[idx].clone());
         }
 
-        // Select best by success rate
         let best = applicable
             .iter()
             .max_by(|a, b| {
-                a.success_rate
-                    .partial_cmp(&b.success_rate)
-                    .unwrap_or(std::cmp::Ordering::Equal)
+                a.success_rate.partial_cmp(&b.success_rate).unwrap_or(std::cmp::Ordering::Equal)
             })
             .cloned()
             .ok_or_else(|| SbmumcError::Learning("No applicable strategy".to_string()))?;
@@ -173,25 +173,17 @@ impl MetaLearner {
     pub fn update_performance(&self, record: PerformanceRecord) {
         debug!("Updating performance for strategy: {}", record.strategy_id);
 
-        // Add to history
         {
             let mut history = self.performance_history.write();
             history.push(record.clone());
-
-            // Keep only last 1000 records
             if history.len() > 1000 {
                 history.remove(0);
             }
         }
 
-        // Update strategy success rate
         if let Some(strategy) = self.strategies.iter_mut().find(|s| s.id == record.strategy_id) {
             let history = self.performance_history.read();
-            let relevant: Vec<_> = history
-                .iter()
-                .filter(|r| r.strategy_id == record.strategy_id)
-                .collect();
-
+            let relevant: Vec<_> = history.iter().filter(|r| r.strategy_id == record.strategy_id).collect();
             if !relevant.is_empty() {
                 let success_count = relevant.iter().filter(|r| r.success).count();
                 strategy.success_rate = success_count as f64 / relevant.len() as f64;
@@ -228,36 +220,24 @@ impl MetaLearner {
         Ok(update)
     }
 
-    /// Optimize hyperparameters based on successful experience
     fn optimize_hyperparameters(&self, data: &SuccessData) -> Result<HashMap<String, f64>> {
         let mut adjustments = HashMap::new();
-
-        // Simple optimization logic
         if let Some(learning_rate) = data.metrics.get("learning_rate") {
-            // Increase learning rate if successful
             adjustments.insert("learning_rate".to_string(), learning_rate * 1.1);
         }
-
         Ok(adjustments)
     }
 
-    /// Adjust hyperparameters after failure
     fn adjust_for_failure(&self, data: &FailureData) -> Result<HashMap<String, f64>> {
         let mut adjustments = HashMap::new();
-
         if let Some(learning_rate) = data.metrics.get("learning_rate") {
-            // Decrease learning rate if failed
             adjustments.insert("learning_rate".to_string(), learning_rate * 0.9);
         }
-
         Ok(adjustments)
     }
 
-    /// Extract patterns from successful experience
     fn extract_patterns(&self, data: &SuccessData) -> Result<Vec<Pattern>> {
-        // Simple pattern extraction
         let mut patterns = Vec::new();
-
         for (key, value) in &data.context {
             patterns.push(Pattern {
                 pattern_type: "feature".to_string(),
@@ -266,34 +246,17 @@ impl MetaLearner {
                 confidence: 0.8,
             });
         }
-
         Ok(patterns)
     }
 
-    /// Identify patterns that led to failure
     fn identify_failure_patterns(&self, data: &FailureData) -> Result<Vec<String>> {
-        let mut patterns = Vec::new();
-
-        for key in data.context.keys() {
-            patterns.push(key.clone());
-        }
-
-        Ok(patterns)
+        Ok(data.context.keys().cloned().collect())
     }
 
-    /// Process feedback from humans or other sources
     fn process_feedback(&self, feedback: &Feedback) -> Result<HashMap<String, f64>> {
-        let mut adjustments = HashMap::new();
-
-        // Convert feedback to adjustments
-        for (key, value) in &feedback.values {
-            adjustments.insert(key.clone(), *value);
-        }
-
-        Ok(adjustments)
+        Ok(feedback.values.clone())
     }
 
-    /// Get learning statistics
     pub fn get_stats(&self) -> LearningStats {
         let history = self.performance_history.read();
         let total = history.len();
@@ -413,22 +376,15 @@ pub struct LearningStats {
 }
 
 // ============================================================================
-// Self-Supervised Learning
+// SELF-SUPERVISED LEARNING
 // ============================================================================
 
-/// Self-supervised learning module
 pub struct SelfSupervisedLearner {
-    /// Pretext tasks
     pretext_tasks: Vec<PretextTask>,
-
-    /// Learned representations
     representations: RwLock<HashMap<String, Vec<f64>>>,
-
-    /// Configuration
     config: SelfSupervisedConfig,
 }
 
-/// Pretext task for self-supervised learning
 #[derive(Debug, Clone)]
 pub struct PretextTask {
     pub id: String,
@@ -438,10 +394,8 @@ pub struct PretextTask {
 }
 
 impl SelfSupervisedLearner {
-    /// Create a new self-supervised learner
     pub fn new() -> Result<Self> {
         info!("Initializing Self-Supervised Learner");
-
         Ok(Self {
             pretext_tasks: Vec::new(),
             representations: RwLock::new(HashMap::new()),
@@ -449,63 +403,42 @@ impl SelfSupervisedLearner {
         })
     }
 
-    /// Learn from unlabeled data
     pub fn learn(&self, data: &[u8]) -> Result<Representation> {
         debug!("Self-supervised learning on {} bytes", data.len());
-
-        // Apply pretext tasks
         let mut features = Vec::new();
         for task in &self.pretext_tasks {
             let task_features = (task.task_fn)(data);
             features.extend(task_features);
         }
-
-        // Store representation
         let id = format!("rep_{}", data.len());
         {
             let mut reps = self.representations.write();
             reps.insert(id.clone(), features.clone());
         }
-
-        Ok(Representation {
-            id,
-            features,
-            dimension: features.len(),
-        })
+        Ok(Representation { id, features, dimension: features.len() })
     }
 
-    /// Contrastive learning between examples
     pub fn contrastive_learn(&self, anchor: &[u8], positive: &[u8], negative: &[u8]) -> Result<f64> {
         let anchor_rep = self.learn(anchor)?;
         let positive_rep = self.learn(positive)?;
         let negative_rep = self.learn(negative)?;
-
         let pos_sim = cosine_similarity(&anchor_rep.features, &positive_rep.features);
         let neg_sim = cosine_similarity(&anchor_rep.features, &negative_rep.features);
-
-        // Loss: maximize positive similarity, minimize negative similarity
         let loss = (neg_sim - pos_sim).max(0.0);
         Ok(loss)
     }
 
-    /// Generate pseudo-labels for data
     pub fn generate_pseudo_labels(&self, data: &[u8], num_labels: usize) -> Result<Vec<PseudoLabel>> {
         let representation = self.learn(data)?;
-
-        // Simple clustering for pseudo-labels
         let mut labels = Vec::new();
-        let cluster_size = representation.features.len() / num_labels;
-
+        let cluster_size = representation.features.len() / num_labels.max(1);
         for i in 0..num_labels {
             labels.push(PseudoLabel {
                 label: i,
                 confidence: 0.7 + (rand_simple() * 0.3),
-                features: representation.features
-                    [i * cluster_size..(i + 1) * cluster_size]
-                    .to_vec(),
+                features: representation.features[i * cluster_size..((i + 1) * cluster_size).min(representation.features.len())].to_vec(),
             });
         }
-
         Ok(labels)
     }
 }
@@ -516,7 +449,6 @@ impl Default for SelfSupervisedLearner {
     }
 }
 
-/// Self-supervised configuration
 #[derive(Debug, Clone)]
 pub struct SelfSupervisedConfig {
     pub enable_contrastive: bool,
@@ -536,7 +468,6 @@ impl Default for SelfSupervisedConfig {
     }
 }
 
-/// Learned representation
 #[derive(Debug, Clone)]
 pub struct Representation {
     pub id: String,
@@ -544,7 +475,6 @@ pub struct Representation {
     pub dimension: usize,
 }
 
-/// Pseudo-label for semi-supervised learning
 #[derive(Debug, Clone)]
 pub struct PseudoLabel {
     pub label: usize,
@@ -553,25 +483,16 @@ pub struct PseudoLabel {
 }
 
 // ============================================================================
-// Active Learning
+// ACTIVE LEARNING
 // ============================================================================
 
-/// Active learning module
 pub struct ActiveLearner {
-    /// Query strategies
     strategies: Vec<QueryStrategy>,
-
-    /// Labeled data pool
     labeled_pool: RwLock<Vec<LabeledData>>,
-
-    /// Unlabeled data pool
     unlabeled_pool: RwLock<Vec<UnlabeledData>>,
-
-    /// Configuration
     config: ActiveLearningConfig,
 }
 
-/// Query strategy for active learning
 #[derive(Debug, Clone)]
 pub enum QueryStrategy {
     UncertaintySampling,
@@ -581,7 +502,6 @@ pub enum QueryStrategy {
     DiversitySampling,
 }
 
-/// Labeled data
 #[derive(Debug, Clone)]
 pub struct LabeledData {
     pub id: EntityId,
@@ -590,7 +510,6 @@ pub struct LabeledData {
     pub confidence: f64,
 }
 
-/// Unlabeled data
 #[derive(Debug, Clone)]
 pub struct UnlabeledData {
     pub id: EntityId,
@@ -599,77 +518,50 @@ pub struct UnlabeledData {
 }
 
 impl ActiveLearner {
-    /// Create a new active learner
     pub fn new() -> Result<Self> {
         info!("Initializing Active Learner");
-
         Ok(Self {
-            strategies: vec![
-                QueryStrategy::UncertaintySampling,
-                QueryStrategy::DiversitySampling,
-            ],
+            strategies: vec![QueryStrategy::UncertaintySampling, QueryStrategy::DiversitySampling],
             labeled_pool: RwLock::new(Vec::new()),
             unlabeled_pool: RwLock::new(Vec::new()),
             config: ActiveLearningConfig::default(),
         })
     }
 
-    /// Select the most informative sample to label
     pub fn select_sample(&self) -> Result<Option<UnlabeledData>> {
         let pool = self.unlabeled_pool.read();
-
         if pool.is_empty() {
             return Ok(None);
         }
-
-        // Use uncertainty sampling
-        let best = pool
-            .iter()
-            .max_by(|a, b| {
-                a.acquisition_score
-                    .partial_cmp(&b.acquisition_score)
-                    .unwrap_or(std::cmp::Ordering::Equal)
-            })
-            .cloned();
-
+        let best = pool.iter().max_by(|a, b| {
+            a.acquisition_score.partial_cmp(&b.acquisition_score).unwrap_or(std::cmp::Ordering::Equal)
+        }).cloned();
         Ok(best)
     }
 
-    /// Add a labeled example
     pub fn add_labeled(&self, data: LabeledData) {
-        let mut pool = self.labeled_pool.write();
-        pool.push(data);
+        self.labeled_pool.write().push(data);
     }
 
-    /// Add unlabeled examples
     pub fn add_unlabeled(&self, data: Vec<UnlabeledData>) {
-        let mut pool = self.unlabeled_pool.write();
-        pool.extend(data);
+        self.unlabeled_pool.write().extend(data);
     }
 
-    /// Update acquisition scores
     pub fn update_scores(&self) {
         let mut pool = self.unlabeled_pool.write();
-
         for data in pool.iter_mut() {
-            // Update based on uncertainty
             data.acquisition_score = self.calculate_uncertainty(&data.features);
         }
     }
 
-    /// Calculate uncertainty score
     fn calculate_uncertainty(&self, features: &[f64]) -> f64 {
-        // Simple uncertainty calculation
-        // In a full implementation, this would use the model
-        features.iter().map(|f| f.abs()).sum::<f64>() / features.len() as f64
+        features.iter().map(|f| f.abs()).sum::<f64>() / features.len().max(1) as f64
     }
 
-    /// Get the number of labeled examples
     pub fn labeled_count(&self) -> usize {
         self.labeled_pool.read().len()
     }
 
-    /// Get the number of unlabeled examples
     pub fn unlabeled_count(&self) -> usize {
         self.unlabeled_pool.read().len()
     }
@@ -681,7 +573,6 @@ impl Default for ActiveLearner {
     }
 }
 
-/// Active learning configuration
 #[derive(Debug, Clone)]
 pub struct ActiveLearningConfig {
     pub batch_size: usize,
@@ -689,7 +580,6 @@ pub struct ActiveLearningConfig {
     pub stopping_criterion: StoppingCriterion,
 }
 
-/// Stopping criterion for active learning
 #[derive(Debug, Clone)]
 pub enum StoppingCriterion {
     BudgetDepleted,
@@ -698,38 +588,32 @@ pub enum StoppingCriterion {
 }
 
 // ============================================================================
-// Utility Functions
+// UTILITY FUNCTIONS
 // ============================================================================
 
-/// Simple random number generator
 fn rand_simple() -> f64 {
     use std::time::{SystemTime, UNIX_EPOCH};
-    let nanos = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .unwrap()
-        .subsec_nanos();
+    let nanos = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().subsec_nanos();
     (nanos as f64) / (u32::MAX as f64)
 }
 
-/// Calculate cosine similarity between two vectors
 fn cosine_similarity(a: &[f64], b: &[f64]) -> f64 {
-    if a.len() != b.len() {
-        return 0.0;
-    }
-
+    if a.len() != b.len() { return 0.0; }
     let dot: f64 = a.iter().zip(b.iter()).map(|(x, y)| x * y).sum();
     let norm_a: f64 = a.iter().map(|x| x * x).sum::<f64>().sqrt();
     let norm_b: f64 = b.iter().map(|x| x * x).sum::<f64>().sqrt();
-
-    if norm_a == 0.0 || norm_b == 0.0 {
-        return 0.0;
-    }
-
+    if norm_a == 0.0 || norm_b == 0.0 { return 0.0; }
     dot / (norm_a * norm_b)
 }
 
 // ============================================================================
-// COMPREHENSIVE LEARNING MODULE
+// COMPREHENSIVE 3000+ TECHNIQUES MODULE
 // ============================================================================
 
 pub mod comprehensive;
+
+// ============================================================================
+// RE-EXPORTS
+// ============================================================================
+
+pub use comprehensive::*;

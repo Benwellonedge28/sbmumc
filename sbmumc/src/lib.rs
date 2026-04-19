@@ -215,6 +215,13 @@ pub mod meta;
 pub use cortex::Cortex;
 pub use core::{Sbmumc, SbmumcConfig};
 
+// Comprehensive Learning & Compilation Techniques
+pub use learning::comprehensive::{
+    LearningRegistry, CompilationRegistry, UnifiedLearningEngine,
+    LearningTechnique, CompilationTechnique,
+    LearningCategory, CompilationCategory,
+};
+
 // Knowledge & reasoning
 pub use knowledge::{KnowledgeGraph, KnowledgeNode};
 pub use reasoning::{Planner, Reasoner};
