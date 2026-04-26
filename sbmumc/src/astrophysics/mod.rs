@@ -12,7 +12,7 @@ pub struct Astrophysics {
     pub astro_id: String,
     pub stellar_models: Vec<StellarModel>,
     pub astronomical_objects: Vec<AstronomicalObject>,
-    pub观测_methods: Vec<ObservationMethod>,
+    pub observation_methods: Vec<ObservationMethod>,
     pub astrophysical_processes: Vec<AstrophysicalProcess>,
 }
 
@@ -29,16 +29,8 @@ pub struct StellarModel {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum StellarType {
-    O,
-    B,
-    A,
-    F,
-    G,
-    K,
-    M,
-    WhiteDwarf,
-    NeutronStar,
-    BlackHole,
+    O, B, A, F, G, K, M,
+    WhiteDwarf, NeutronStar, BlackHole,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -53,13 +45,7 @@ pub struct AstronomicalObject {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum ObjectType {
-    Star,
-    Planet,
-    Galaxy,
-    Nebula,
-    Cluster,
-    AGN,
-    Quasar,
+    Star, Planet, Galaxy, Nebula, Cluster, AGN, Quasar,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -73,13 +59,7 @@ pub struct ObservationMethod {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum WavelengthBand {
-    Radio,
-    Microwave,
-    Infrared,
-    Optical,
-    UV,
-    XRay,
-    GammaRay,
+    Radio, Microwave, Infrared, Optical, UV, XRay, GammaRay,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -99,20 +79,9 @@ impl Astrophysics {
                 StellarModel {
                     model_id: String::from("sun_1"),
                     stellar_type: StellarType::G,
-                    mass_msun: 1.0,
-                    radius_rsun: 1.0,
-                    luminosity_lsun: 1.0,
+                    mass_msun: 1.0, radius_rsun: 1.0, luminosity_lsun: 1.0,
                     effective_temperature_k: 5778.0,
                     evolutionary_stage: String::from("Main sequence"),
-                },
-                StellarModel {
-                    model_id: String::from("red_giant_1"),
-                    stellar_type: StellarType::K,
-                    mass_msun: 1.5,
-                    radius_rsun: 100.0,
-                    luminosity_lsun: 3000.0,
-                    effective_temperature_k: 3500.0,
-                    evolutionary_stage: String::from("Red giant branch"),
                 },
             ],
             astronomical_objects: vec![
@@ -122,7 +91,7 @@ impl Astrophysics {
                     mass_kg: 4.0 * 1.989e30,
                     distance_pc: 2.6,
                     luminosity_w: 25.0 * 3.846e26,
-                    catalog_names: vec![String::from("HD 48915"), String::from("HIP 28256")],
+                    catalog_names: vec![String::from("HD 48915")],
                 },
             ],
             observation_methods: vec![
@@ -155,17 +124,13 @@ impl Astrophysics {
     }
 
     pub fn calculate_luminosity(&self, mass_msun: f64) -> f64 {
-        if mass_msun < 2.0 {
-            mass_msun.powi(4)
-        } else {
-            mass_msun.powi(3.5)
-        }
+        if mass_msun < 2.0 { mass_msun.powi(4) } else { mass_msun.powi(3) }
     }
 
     pub fn analyze_stellar_evolution(&self, initial_mass_msun: f64) -> StellarEvolution {
         StellarEvolution {
             initial_mass_msun,
-            main_sequence_lifetime_gyr: 10.0 / (initial_mass_msun.powi(2.5)),
+            main_sequence_lifetime_gyr: 10.0 / (initial_mass_msun.powi(2)),
             final_state: if initial_mass_msun < 8.0 { String::from("White dwarf") } else { String::from("Supernova") },
             remnant_mass_msun: if initial_mass_msun < 8.0 { 0.6 } else { 1.4 },
         }
