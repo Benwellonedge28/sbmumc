@@ -773,6 +773,134 @@ pub use exoplanetary_adaptation::{
 };
 
 // ============================================================================
+// TIME & SPACETIME MODULES (Files 476-500)
+// ============================================================================
+
+// Time Philosophy
+pub mod time_philosophy;
+
+// Temporal Logic
+pub mod temporal_logic;
+
+// Spacetime Physics
+pub mod spacetime_physics;
+
+// Block Universe
+pub mod block_universe;
+
+// Eternalism
+pub mod eternalism;
+
+// Presentism
+pub mod presentism;
+
+// Growing Block Universe
+pub mod growing_block;
+
+// Spacetime Curvature
+pub mod spacetime_curvature;
+
+// Temporal Perception
+pub mod temporal_perception;
+
+// Time Measurement
+pub mod time_measurement;
+
+// Chronobiology
+pub mod chronobiology;
+
+// Time Travel
+pub mod time_travel;
+
+// Philosophy of Time
+pub mod philosophy_of_time;
+
+// Temporal Mechanics
+pub mod temporal_mechanics;
+
+// Spacetime Geometry
+pub mod spacetime_geometry;
+
+// Temporal Paradox
+pub mod temporal_paradox;
+
+// Time Arrow
+pub mod time_arrow;
+
+// Causality Loops
+pub mod causality_loops;
+
+// Temporal Flow
+pub mod temporal_flow;
+
+// Time Reversal
+pub mod time_reversal;
+
+// ============================================================================
+// TIME & SPACETIME RE-EXPORTS
+// ============================================================================
+
+// Time Philosophy
+pub use time_philosophy::TimePhilosophy;
+
+// Temporal Logic
+pub use temporal_logic::TemporalLogic;
+
+// Spacetime Physics
+pub use spacetime_physics::SpacetimePhysics;
+
+// Block Universe
+pub use block_universe::BlockUniverse;
+
+// Eternalism
+pub use eternalism::Eternalism;
+
+// Presentism
+pub use presentism::Presentism;
+
+// Growing Block Universe
+pub use growing_block::GrowingBlock;
+
+// Spacetime Curvature
+pub use spacetime_curvature::SpacetimeCurvature;
+
+// Temporal Perception
+pub use temporal_perception::TemporalPerception;
+
+// Time Measurement
+pub use time_measurement::TimeMeasurement;
+
+// Chronobiology
+pub use chronobiology::Chronobiology;
+
+// Time Travel
+pub use time_travel::TimeTravel;
+
+// Philosophy of Time
+pub use philosophy_of_time::PhilosophyOfTime;
+
+// Temporal Mechanics
+pub use temporal_mechanics::TemporalMechanics;
+
+// Spacetime Geometry
+pub use spacetime_geometry::SpacetimeGeometry;
+
+// Temporal Paradox
+pub use temporal_paradox::TemporalParadox;
+
+// Time Arrow
+pub use time_arrow::TimeArrow;
+
+// Causality Loops
+pub use causality_loops::CausalityLoops;
+
+// Temporal Flow
+pub use temporal_flow::TemporalFlow;
+
+// Time Reversal
+pub use time_reversal::TimeReversal;
+
+// ============================================================================
 // RE-EXPORTS FOR COMMON TYPES
 // ============================================================================
 
