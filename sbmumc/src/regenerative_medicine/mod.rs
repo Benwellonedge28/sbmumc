@@ -1,106 +1,56 @@
-//! Regenerative Medicine Module
+//! Regenerative Medicine Module (704)
 //!
-//! This module implements tissue regeneration, stem cell therapy,
-//! organ repair, and biological restoration technologies.
+//! Tissue regeneration, stem cell therapies, and healing enhancement technologies.
 
-use crate::core::{SbmumcError, Result};
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use crate::core::{SbmumcError, Result};
 
-pub struct RegenerativeMedicine {
-    pub therapies: Vec<RegenerativeTherapy>,
-    pub stem_cells: Vec<StemCellLine>,
-    pub regenerative_potential: HashMap<String, f64>,
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum RegenerationType {
+    CellTherapy,
+    TissueEngineering,
+    GeneActivation,
+    BiomaterialInduction,
+    Combination,
 }
 
-impl RegenerativeMedicine {
-    pub fn new() -> Self {
-        RegenerativeMedicine {
-            therapies: Vec::new(),
-            stem_cells: vec![
-                StemCellLine { cell_type: "MSC".to_string(), source: "Bone marrow".to_string(), potency: 0.7 },
-                StemCellLine { cell_type: "iPSC".to_string(), source: "Fibroblasts".to_string(), potency: 1.0 },
-            ],
-            regenerative_potential: HashMap::from([
-                ("Liver".to_string(), 0.8),
-                ("Skin".to_string(), 0.9),
-                ("Blood".to_string(), 0.95),
-                ("Heart".to_string(), 0.2),
-                ("Nervous system".to_string(), 0.1),
-            ]),
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RegenerationProtocol {
+    pub protocol_id: String,
+    pub target_tissue: String,
+    pub regeneration_type: RegenerationType,
+    pub treatment_duration_days: u32,
+    pub success_rate: f64,
+    pub recovery_time_days: u32,
+    pub cost_estimate_usd: f64,
+    pub clinical_status: String,
+}
+
+impl RegenerationProtocol {
+    pub fn new(protocol_id: String, target_tissue: String) -> Self {
+        Self {
+            protocol_id,
+            target_tissue,
+            regeneration_type: RegenerationType::CellTherapy,
+            treatment_duration_days: 0,
+            success_rate: 0.0,
+            recovery_time_days: 0,
+            cost_estimate_usd: 0.0,
+            clinical_status: "Preclinical".into(),
         }
     }
 
-    /// Design therapy
-    pub fn design_therapy(&mut self, tissue_type: &str) -> &RegenerativeTherapy {
-        let therapy = RegenerativeTherapy {
-            therapy_id: format!("regen_{}", self.therapies.len()),
-            tissue_type: tissue_type.to_string(),
-            cell_source: "Stem cells".to_string(),
-            efficacy: *self.regenerative_potential.get(tissue_type).unwrap_or(&0.5),
-        };
-        self.therapies.push(therapy);
-        self.therapies.last().unwrap()
-    }
-
-    /// Regenerate tissue
-    pub fn regenerate(&mut self, therapy_id: &str) -> RegenerationResult {
-        let therapy = self.therapies.iter().find(|t| t.therapy_id == therapy_id);
-        RegenerationResult {
-            therapy_id: therapy_id.to_string(),
-            success: true,
-            extent: therapy.map(|t| t.efficacy).unwrap_or(0.5),
-        }
-    }
-
-    /// Culture stem cells
-    pub fn culture_stem_cells(&mut self, cell_type: &str) -> &StemCellLine {
-        let cell = StemCellLine {
-            cell_type: cell_type.to_string(),
-            source: "Cultured".to_string(),
-            potency: 1.0,
-        };
-        self.stem_cells.push(cell);
-        self.stem_cells.last().unwrap()
-    }
-
-    /// Assess regenerative capacity
-    pub fn assess_capacity(&self, tissue_type: &str) -> CapacityResult {
-        CapacityResult {
-            tissue_type: tissue_type.to_string(),
-            capacity: *self.regenerative_potential.get(tissue_type).unwrap_or(&0.5),
-            recommended_approach: "Stem cell therapy".to_string(),
-        }
+    pub fn cost_effectiveness(&self) -> f64 {
+        self.success_rate / (self.cost_estimate_usd / 1000.0).max(1.0)
     }
 }
 
-impl Default for RegenerativeMedicine { fn default() -> Self { Self::new() } }
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct RegenerativeTherapy {
-    pub therapy_id: String,
-    pub tissue_type: String,
-    pub cell_source: String,
-    pub efficacy: f64,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct StemCellLine {
-    pub cell_type: String,
-    pub source: String,
-    pub potency: f64,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct RegenerationResult {
-    pub therapy_id: String,
-    pub success: bool,
-    pub extent: f64,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CapacityResult {
-    pub tissue_type: String,
-    pub capacity: f64,
-    pub recommended_approach: String,
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn test_regenerative() {
+        let protocol = RegenerationProtocol::new("RP-001".into(), "Cardiac".into());
+        assert_eq!(protocol.target_tissue, "Cardiac");
+    }
 }

@@ -1,113 +1,64 @@
-//! Drug Discovery Module
+//! Drug Discovery Module (710)
 //!
-//! This module implements computational drug design, virtual screening,
-//! lead optimization, and AI-driven pharmaceutical discovery.
+//! High-throughput screening, virtual screening, and hit-to-lead optimization.
 
-use crate::core::{SbmumcError, Result};
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
-
-pub struct DrugDiscovery {
-    pub compounds: Vec<Compound>,
-    pub targets: Vec<DrugTarget>,
-    pub screening_results: Vec<ScreeningResult>,
-}
-
-impl DrugDiscovery {
-    pub fn new() -> Self {
-        DrugDiscovery {
-            compounds: Vec::new(),
-            targets: vec![
-                DrugTarget { target_name: "ACE2".to_string(), disease: "COVID-19".to_string() },
-                DrugTarget { target_name: "HER2".to_string(), disease: "Breast cancer".to_string() },
-            ],
-            screening_results: Vec::new(),
-        }
-    }
-
-    /// Add compound
-    pub fn add_compound(&mut self, smiles: &str) -> &Compound {
-        let compound = Compound {
-            compound_id: format!("comp_{}", self.compounds.len()),
-            smiles: smiles.to_string(),
-            molecular_weight: 350.0,
-            logp: 2.5,
-            drug_likeness: 0.8,
-        };
-        self.compounds.push(compound);
-        self.compounds.last().unwrap()
-    }
-
-    /// Virtual screen
-    pub fn virtual_screen(&mut self, target: &str, library_size: usize) -> &ScreeningResult {
-        let result = ScreeningResult {
-            result_id: format!("screen_{}", self.screening_results.len()),
-            target: target.to_string(),
-            library_size,
-            hits: library_size / 1000,
-            hit_rate: 0.001,
-        };
-        self.screening_results.push(result);
-        self.screening_results.last().unwrap()
-    }
-
-    /// Optimize lead
-    pub fn optimize_lead(&mut self, compound_id: &str, property: &str) -> OptimizationResult {
-        OptimizationResult {
-            compound_id: compound_id.to_string(),
-            optimized_property: property.to_string(),
-            improvement: 0.3,
-        }
-    }
-
-    /// Predict ADMET
-    pub fn predict_admet(&self, compound_id: &str) -> ADMETPrediction {
-        ADMETPrediction {
-            compound_id: compound_id.to_string(),
-            absorption: "Good".to_string(),
-            toxicity: "Low".to_string(),
-            predicted_half_life_hrs: 4.0,
-        }
-    }
-}
-
-impl Default for DrugDiscovery { fn default() -> Self { Self::new() } }
+use crate::core::{SbmumcError, Result};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Compound {
-    pub compound_id: String,
-    pub smiles: String,
-    pub molecular_weight: f64,
-    pub logp: f64,
-    pub drug_likeness: f64,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DrugTarget {
-    pub target_name: String,
-    pub disease: String,
+pub enum ScreeningType {
+    HTS,
+    VHTS,
+    Fragment,
+    Phenotypic,
+    TargetBased,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ScreeningResult {
-    pub result_id: String,
-    pub target: String,
-    pub library_size: usize,
-    pub hits: usize,
+    pub screen_id: String,
+    pub screening_type: ScreeningType,
+    pub compounds_tested: u32,
+    pub hits_identified: u32,
     pub hit_rate: f64,
+    pub assay_type: String,
+    pub z_factor: f64,
+    pub primary_hit_confidence: f64,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct OptimizationResult {
-    pub compound_id: String,
-    pub optimized_property: String,
-    pub improvement: f64,
+impl ScreeningResult {
+    pub fn new(screen_id: String, screening_type: ScreeningType) -> Self {
+        Self {
+            screen_id,
+            screening_type,
+            compounds_tested: 0,
+            hits_identified: 0,
+            hit_rate: 0.0,
+            assay_type: "Fluorescence".into(),
+            z_factor: 0.0,
+            primary_hit_confidence: 0.0,
+        }
+    }
+
+    pub fn calculate_hit_rate(&mut self) {
+        if self.compounds_tested > 0 {
+            self.hit_rate = (self.hits_identified as f64 / self.compounds_tested as f64) * 100.0;
+        }
+    }
+
+    pub fn assay_quality(&self) -> String {
+        if self.z_factor > 0.7 { "Excellent".into() }
+        else if self.z_factor > 0.5 { "Acceptable".into() }
+        else { "Poor".into() }
+    }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ADMETPrediction {
-    pub compound_id: String,
-    pub absorption: String,
-    pub toxicity: String,
-    pub predicted_half_life_hrs: f64,
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn test_screening() {
+        let result = ScreeningResult::new("SC-001".into(), ScreeningType::HTS);
+        assert_eq!(result.screen_id, "SC-001");
+    }
 }

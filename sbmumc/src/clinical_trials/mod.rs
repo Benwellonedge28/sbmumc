@@ -1,113 +1,82 @@
-//! Clinical Trials Module
+//! Clinical Trials Module (711)
 //!
-//! This module implements clinical trial design, patient recruitment,
-//! adaptive trials, and regulatory compliance for medical research.
+//! Clinical trial design, execution, monitoring, and regulatory compliance.
 
-use crate::core::{SbmumcError, Result};
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use crate::core::{SbmumcError, Result};
 
-pub struct ClinicalTrials {
-    pub trials: Vec<ClinicalTrial>,
-    pub protocols: Vec<TrialProtocol>,
-    pub sites: Vec<TrialSite>,
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum TrialPhase {
+    Phase1,
+    Phase2,
+    Phase3,
+    Phase4,
 }
 
-impl ClinicalTrials {
-    pub fn new() -> Self {
-        ClinicalTrials {
-            trials: Vec::new(),
-            protocols: vec![
-                TrialProtocol { phase: "Phase I".to_string(), primary_endpoint: "Safety".to_string(), sample_size: 30 },
-                TrialProtocol { phase: "Phase II".to_string(), primary_endpoint: "Efficacy".to_string(), sample_size: 100 },
-                TrialProtocol { phase: "Phase III".to_string(), primary_endpoint: "Clinical benefit".to_string(), sample_size: 1000 },
-            ],
-            sites: Vec::new(),
-        }
-    }
-
-    /// Design trial
-    pub fn design_trial(&mut self, drug: &str, indication: &str) -> &ClinicalTrial {
-        let trial = ClinicalTrial {
-            trial_id: format!("trial_{}", self.trials.len()),
-            drug: drug.to_string(),
-            indication: indication.to_string(),
-            phase: "Phase II".to_string(),
-            status: "Recruiting".to_string(),
-        };
-        self.trials.push(trial);
-        self.trials.last().unwrap()
-    }
-
-    /// Add trial site
-    pub fn add_site(&mut self, trial_id: &str, location: &str) -> &TrialSite {
-        let site = TrialSite {
-            site_id: format!("site_{}", self.sites.len()),
-            trial_id: trial_id.to_string(),
-            location: location.to_string(),
-            enrollment: 10,
-        };
-        self.sites.push(site);
-        self.sites.last().unwrap()
-    }
-
-    /// Analyze interim results
-    pub fn analyze_interim(&self, trial_id: &str) -> InterimAnalysis {
-        InterimAnalysis {
-            trial_id: trial_id.to_string(),
-            p_value: 0.03,
-            efficacy_signal: true,
-            recommendation: "Continue".to_string(),
-        }
-    }
-
-    /// Randomize patient
-    pub fn randomize(&mut self, patient_id: &str, trial_id: &str) -> RandomizationResult {
-        RandomizationResult {
-            patient_id: patient_id.to_string(),
-            trial_id: trial_id.to_string(),
-            arm: "Treatment".to_string(),
-        }
-    }
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum TrialDesign {
+    Randomized,
+    DoubleBlind,
+    Crossover,
+    Adaptive,
+    HistoricalControl,
 }
-
-impl Default for ClinicalTrials { fn default() -> Self { Self::new() } }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ClinicalTrial {
     pub trial_id: String,
-    pub drug: String,
+    pub protocol_number: String,
+    pub phase: TrialPhase,
+    pub trial_design: TrialDesign,
     pub indication: String,
-    pub phase: String,
-    pub status: String,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TrialProtocol {
-    pub phase: String,
+    pub enrollment_target: u32,
+    pub sites_count: u32,
+    pub duration_months: u32,
     pub primary_endpoint: String,
-    pub sample_size: usize,
+    pub statistical_power: f64,
+    pub current_status: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TrialSite {
-    pub site_id: String,
-    pub trial_id: String,
-    pub location: String,
-    pub enrollment: usize,
+impl ClinicalTrial {
+    pub fn new(trial_id: String, indication: String) -> Self {
+        Self {
+            trial_id,
+            protocol_number: String::new(),
+            phase: TrialPhase::Phase1,
+            trial_design: TrialDesign::Randomized,
+            indication,
+            enrollment_target: 0,
+            sites_count: 0,
+            duration_months: 0,
+            primary_endpoint: "Safety".into(),
+            statistical_power: 80.0,
+            current_status: "Planning".into(),
+        }
+    }
+
+    pub fn sample_size_calculation(&self, effect_size: f64, alpha: f64) -> u32 {
+        let z_alpha = 1.96; // for alpha = 0.05
+        let z_beta = 0.84; // for power = 80%
+        let n = 2.0 * ((z_alpha + z_beta) / effect_size).powi(2);
+        n as u32
+    }
+
+    pub fn success_probability(&self) -> f64 {
+        match self.phase {
+            TrialPhase::Phase1 => 70.0,
+            TrialPhase::Phase2 => 40.0,
+            TrialPhase::Phase3 => 60.0,
+            TrialPhase::Phase4 => 90.0,
+        }
+    }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct InterimAnalysis {
-    pub trial_id: String,
-    pub p_value: f64,
-    pub efficacy_signal: bool,
-    pub recommendation: String,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct RandomizationResult {
-    pub patient_id: String,
-    pub trial_id: String,
-    pub arm: String,
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn test_trial() {
+        let trial = ClinicalTrial::new("NCT-001".into(), "Oncology".into());
+        assert_eq!(trial.indication, "Oncology");
+    }
 }

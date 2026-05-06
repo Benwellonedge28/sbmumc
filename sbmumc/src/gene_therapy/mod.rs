@@ -1,105 +1,62 @@
-//! Gene Therapy Module
+//! Gene Therapy Module (698)
 //!
-//! This module implements gene therapy, viral vector delivery,
-//! CRISPR-based therapies, and genetic disease treatment.
+//! Therapeutic gene delivery, viral vectors, and genetic treatment protocols.
 
-use crate::core::{SbmumcError, Result};
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use crate::core::{SbmumcError, Result};
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum VectorType {
+    AAV,
+    Lentivirus,
+    Adenovirus,
+    Retrovirus,
+    NonViral,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GeneTherapy {
-    pub therapies: Vec<GeneTherapyProtocol>,
-    pub vectors: Vec<ViralVector>,
-    pub treatments: Vec<TreatmentRecord>,
+    pub therapy_id: String,
+    pub target_disease: String,
+    pub vector_type: VectorType,
+    pub therapeutic_gene: String,
+    pub delivery_route: String,
+    pub expression_duration: String,
+    pub clinical_phase: u8,
+    pub efficacy_rate: f64,
+    pub safety_score: f64,
 }
 
 impl GeneTherapy {
-    pub fn new() -> Self {
-        GeneTherapy {
-            therapies: Vec::new(),
-            vectors: vec![
-                ViralVector { vector_type: "AAV".to_string(), serotype: "AAV9".to_string(), capacity_bp: 4800 },
-                ViralVector { vector_type: "Lentivirus".to_string(), serotype: "HIV".to_string(), capacity_bp: 8000 },
-            ],
-            treatments: Vec::new(),
+    pub fn new(therapy_id: String, target_disease: String) -> Self {
+        Self {
+            therapy_id,
+            target_disease,
+            vector_type: VectorType::AAV,
+            therapeutic_gene: String::new(),
+            delivery_route: "IV".into(),
+            expression_duration: "Transient".into(),
+            clinical_phase: 0,
+            efficacy_rate: 0.0,
+            safety_score: 0.0,
         }
     }
 
-    /// Design therapy
-    pub fn design_therapy(&mut self, gene: &str, target: &str) -> &GeneTherapyProtocol {
-        let therapy = GeneTherapyProtocol {
-            therapy_id: format!("gtx_{}", self.therapies.len()),
-            target_gene: gene.to_string(),
-            delivery_target: target.to_string(),
-            vector_type: "AAV".to_string(),
-        };
-        self.therapies.push(therapy);
-        self.therapies.last().unwrap()
+    pub fn approval_likelihood(&self) -> f64 {
+        (self.efficacy_rate + self.safety_score) / 2.0 * (self.clinical_phase as f64 / 3.0)
     }
 
-    /// Select vector
-    pub fn select_vector(&mut self, vector_type: &str, serotype: &str) -> &ViralVector {
-        let vector = ViralVector {
-            vector_type: vector_type.to_string(),
-            serotype: serotype.to_string(),
-            capacity_bp: 5000,
-        };
-        self.vectors.push(vector);
-        self.vectors.last().unwrap()
-    }
-
-    /// Administer treatment
-    pub fn administer(&mut self, therapy_id: &str, patient_id: &str) -> &TreatmentRecord {
-        let treatment = TreatmentRecord {
-            treatment_id: format!("treat_{}", self.treatments.len()),
-            therapy_id: therapy_id.to_string(),
-            patient_id: patient_id.to_string(),
-            dosage: "1e11 vg/kg".to_string(),
-            outcome: "Successful".to_string(),
-        };
-        self.treatments.push(treatment);
-        self.treatments.last().unwrap()
-    }
-
-    /// Monitor expression
-    pub fn monitor_expression(&self, treatment_id: &str) -> ExpressionMonitoring {
-        ExpressionMonitoring {
-            treatment_id: treatment_id.to_string(),
-            expression_level: 0.7,
-            duration_months: 12,
-        }
+    pub fn is_ready_for_clinic(&self) -> bool {
+        self.clinical_phase >= 2 && self.safety_score > 80.0
     }
 }
 
-impl Default for GeneTherapy { fn default() -> Self { Self::new() } }
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct GeneTherapyProtocol {
-    pub therapy_id: String,
-    pub target_gene: String,
-    pub delivery_target: String,
-    pub vector_type: String,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ViralVector {
-    pub vector_type: String,
-    pub serotype: String,
-    pub capacity_bp: usize,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TreatmentRecord {
-    pub treatment_id: String,
-    pub therapy_id: String,
-    pub patient_id: String,
-    pub dosage: String,
-    pub outcome: String,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ExpressionMonitoring {
-    pub treatment_id: String,
-    pub expression_level: f64,
-    pub duration_months: usize,
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn test_gene_therapy() {
+        let therapy = GeneTherapy::new("GT-001".into(), "SMA".into());
+        assert_eq!(therapy.target_disease, "SMA");
+    }
 }
