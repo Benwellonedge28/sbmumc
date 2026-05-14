@@ -1,0 +1,67 @@
+# SBMUMC Default Configuration (Hybrid Mode)
+
+[system]
+name = "SBMUMC"
+version = "1.0.0"
+mode = "Hybrid"
+data_dir = "/var/sbmumc/data"
+cache_dir = "/var/sbmumc/cache"
+log_level = "info"
+max_memory_mb = 4096
+threads = 16
+
+[omnidev]
+enabled = true
+semantic_graph_path = "/var/sbmumc/graph"
+max_context_nodes = 1000
+latency_target_ms = 100
+enable_formal_verification = true
+enable_evas_filter = true
+enable_audit_trail = true
+incremental_indexing = true
+parallel_workers = 16
+
+[network]
+mode = "Cached"
+api_endpoint = "https://api.sbmumc.local"
+ws_endpoint = "wss://ws.sbmumc.local"
+timeout_seconds = 30
+retry_attempts = 3
+cache_enabled = true
+cache_ttl_seconds = 3600
+
+[security]
+encryption_enabled = true
+audit_trail_immutable = true
+human_override_required = false
+max_failed_attempts = 5
+session_timeout_minutes = 60
+allowed_origins = ["*"]
+
+[storage]
+backend = "Hybrid"
+path = "/var/sbmumc/storage"
+max_size_mb = 10240
+auto_cleanup = true
+compression = true
+
+[plugins]
+enabled = true
+plugin_dir = "/var/sbmumc/plugins"
+sandbox_enabled = true
+allowed_signatures = []
+auto_load = true
+
+[logging]
+level = "info"
+file_path = "/var/sbmumc/logs/sbmumc.log"
+max_size_mb = 100
+rotation = "daily"
+structured = true
+
+[features]
+enable_quantum = false
+enable_biological = false
+enable_exoplanetary = false
+enable_consciousness_transfer = false
+enable_temporal = false

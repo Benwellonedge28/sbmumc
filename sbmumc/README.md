@@ -1,290 +1,203 @@
-# Samuel Benwellonedge Mukandara Universal Meta-Compiler (SBMUMC)
+# SBMUMC - Samuel Benwellonedge Mukandara Universal Meta-Compiler
 
-A comprehensive AGI system and universal compiler framework written in Rust, designed to compile everything from grammar files to sovereign operating systems.
+**GSTM INFINITY** - A sovereign AGI system and universal compiler framework
+
+```
+╔═══════════════════════════════════════════════════════════════════════════════╗
+║                                                                               ║
+║   ███████╗██╗   ██╗███╗   ███╗██╗   ██╗███████╗██╗  ██╗███████╗             ║
+║   ██╔════╝██║   ██║████╗ ████║██║   ██║██╔════╝██║  ██║██╔════╝             ║
+║   ███████╗██║   ██║██╔████╔██║██║   ██║███████╗███████║███████╗             ║
+║   ╚════██║██║   ██║██║╚██╔╝██║██║   ██║╚════██║██╔══██║╚════██║             ║
+║   ███████║╚██████╔╝██║ ╚═╝ ██║╚██████╔╝███████║██║  ██║███████║             ║
+║   ╚══════╝ ╚═════╝ ╚═╝     ╚═╝ ╚═════╝ ╚══════╝╚═╝  ╚═╝╚══════╝             ║
+║                                                                               ║
+║   Universal Meta-Compiler (GSTM INFINITY)                                     ║
+║                                                                               ║
+╚═══════════════════════════════════════════════════════════════════════════════╝
+```
 
 ## Overview
 
-SBMUMC is an ambitious project that combines artificial general intelligence capabilities with a universal meta-compiler. The system is designed with the following core principles:
+SBMUMC is a comprehensive sovereign AGI system and universal meta-compiler framework designed for:
 
-- **Program-Once-Compile-Run-Everywhere-Anywhere-Forever**: Cross-platform compilation targeting multiple architectures
-- **Sovereign AGI**: Self-controlled, explainable AI behavior with human safety as the top priority
-- **Cultural Adaptation**: Region-aware behavior and responses
-- **Zero-Knowledge Initialization**: Starting from minimal pre-programmed knowledge
-
-## Architecture
-
-The system is organized into the following core modules:
-
-### Core System Modules
-
-| Module | Description |
-|--------|-------------|
-| `core` | Essential types, errors, configuration, and utilities |
-| `cortex` | Central processing unit for information handling |
-
-### Knowledge & Reasoning
-
-| Module | Description |
-|--------|-------------|
-| `knowledge` | Knowledge graph and representation management |
-| `reasoning` | Reasoning, planning, and decision making |
-
-### Learning Systems
-
-| Module | Description |
-|--------|-------------|
-| `learning` | Meta-learning, active learning, and self-supervised learning |
-
-### Input/Output
-
-| Module | Description |
-|--------|-------------|
-| `io` | Multi-modal input/output handling (text, voice, files) |
-| `language` | Natural language processing and translation |
-
-### Security & Control
-
-| Module | Description |
-|--------|-------------|
-| `security` | Layered security, intrusion detection, and self-healing |
-| `admin` | Administration interface and document compilation |
-
-### Compilation
-
-| Module | Description |
-|--------|-------------|
-| `compiler` | Universal meta-compiler framework |
+- **Compile everything** - From grammar files to programming languages
+- **Meta-compiler capabilities** - Self-hosting compilation
+- **Sovereign OS development** - Generate OS for any platform
+- **AI safety and control** - Human-AI collaboration
+- **Offline operation** - Edge AI inference without connectivity
+- **Universal integration** - Existing and future software
 
 ## Features
 
-### AGI Capabilities
+### Core Capabilities
+- **OmniDev AGI** - Instantaneous, holistic software development agent
+- **Global Semantic Graph Engine** - Hybrid vector + property graph storage
+- **Atomic Transaction System** - Repository operations with rollback
+- **Formal Verification** - SMT-LIB/Z3/Coq integration
+- **EVAS Security Filter** - Ethical, Validated, Audited, Safe operations
 
-- **Meta-Learning**: The system learns how to learn, adapting its learning strategies based on experience
-- **Active Learning**: Asks questions and seeks clarification when needed
-- **Self-Supervised Learning**: Learns from self-generated labels and patterns
-- **Cultural Intelligence**: Adapts to different cultural norms and values
-- **Emotional Intelligence**: Detects and responds to human emotions
+### Operating Modes
+- **Online Mode** - Full network access, cloud sync, real-time updates
+- **Offline Mode** - Air-gapped operation, local processing, maximum privacy
+- **Hybrid Mode** - Cached operation with graceful offline fallback
 
-### Security Features
+### Modules (1560+)
+- Meta-Compiler Foundation (FCO, Nano, POCO-REAF, OS Generator)
+- Advanced AGI Capabilities (Quantum, Evolution, Consciousness)
+- Transcendent & Frontier Systems
+- Esoteric Knowledge Bases
 
-- **Layered Security**: Multiple levels of security including firewalls, intrusion detection, and encryption
-- **Intrusion Detection**: Real-time detection and response to security threats
-- **Self-Healing**: Automatic recovery from security incidents
-- **Audit Logging**: Comprehensive logging of all security events
+## Quick Start
 
-### Compilation Capabilities
-
-- **Grammar Compilation**: Compile grammar files (ANTLR, EBNF, BNF) into lexers and parsers
-- **Language Compilation**: Create programming language compilers from definitions
-- **Framework Generation**: Generate various framework types including Web, AI, and Sovereign AGI frameworks
-- **OS Compilation**: Build sovereign operating systems with custom components
-
-### Multi-Modal I/O
-
-- **Text Processing**: Natural language text input and output
-- **Voice Processing**: Speech recognition and synthesis
-- **File Handling**: Support for multiple file formats
-- **Structured Data**: JSON, XML, YAML processing
-
-## Installation
-
-### Prerequisites
-
-- Rust 1.70 or later
-- Cargo package manager
-
-### Building
+### Docker (Recommended)
 
 ```bash
-# Clone the repository
-git clone https://github.com/sbmumc/sbmumc.git
+# Pull pre-built image
+docker pull sbmumc/sbmumc:hybrid
 
-# Navigate to the project directory
-cd sbmumc
+# Run in hybrid mode (default)
+docker run -p 8080:8080 -v sbmumc-data:/var/sbmumc sbmumc/sbmumc:hybrid
 
-# Build the project
-cargo build --release
+# Run in offline mode
+docker run -v sbmumc-data:/var/sbmumc sbmumc/sbmumc:offline
 
-# Run tests
-cargo test
+# Run with docker-compose
+docker-compose up omnidev-hybrid
 ```
 
-### Running
+### Build from Source
 
 ```bash
-# Run with default configuration
-cargo run
+# Clone repository
+git clone https://github.com/sbmumc/sbmumc.git
+cd sbmumc
 
-# Initialize new instance
-cargo run -- --init
+# Build release
+cargo build --release
 
-# Compile a file
-cargo run -- --compile path/to/file.g4
+# Run CLI
+./target/release/sbmumc --mode hybrid --cli
 
-# Specify target architecture
-cargo run -- --compile path/to/source.rs --target wasm
+# Run API server
+./target/release/sbmumc --mode hybrid --api --port 8080
 ```
 
 ## Configuration
 
-The system is configured via `sbmumc.toml`. Key configuration sections include:
+### Environment Variables
 
-### System Configuration
-
-```toml
-[system]
-name = "SBMUMC"
-version = "0.1.0"
-owner = "Samuel Benwellonedge Mukandara"
-enable_self_improvement = true
-enable_distributed = false
+```bash
+SBMUMC_MODE=Hybrid          # Online, Offline, or Hybrid
+SBMUMC_DATA_DIR=/var/sbmumc/data
+SBMUMC_LOG_LEVEL=info       # debug, info, warn, error
+SBMUMC_OMNIVDEV_ENABLED=true
+SBMUMC_LATENCY_TARGET_MS=100
 ```
 
-### Security Configuration
+### Configuration Files
 
-```toml
-[security]
-level = "Secret"
-enable_intrusion_detection = true
-enable_self_healing = true
-require_mfa = true
-```
+- `config/default.toml` - Hybrid mode (default)
+- `config/offline.toml` - Offline/air-gapped operation
+- `config/online.toml` - Full online mode
 
-### Learning Configuration
+## API Reference
 
-```toml
-[learning]
-enable_meta_learning = true
-enable_active_learning = true
-enable_self_supervised = true
-learning_rate = 0.001
-```
+### REST Endpoints
 
-### Compiler Configuration
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/v1/status` | System status |
+| POST | `/api/v1/omnidev` | OmniDev operations |
+| POST | `/api/v1/graph/search` | Semantic search |
+| GET | `/api/v1/config` | Configuration |
+| POST | `/api/v1/transaction` | Atomic transactions |
+| GET | `/api/v1/audit` | Audit trail |
 
-```toml
-[compiler]
-enable_meta_compilation = true
-enable_grammar_compilation = true
-enable_language_compilation = true
-enable_framework_compilation = true
-enable_os_compilation = true
-supported_targets = ["universal", "x86_64", "aarch64", "wasm", "llvm"]
-```
+### WebSocket
 
-## Usage Examples
+Connect to `ws://localhost:8081/ws` for real-time feedback.
 
-### Compile a Grammar File
+## OmniDev AGI System
+
+### Features
+- **<100ms latency** - Single-session paradigm
+- **Context compression** - PageRank-style semantic graph
+- **Atomic transactions** - Multi-file refactoring
+- **Automated testing** - Property-based test generation
+- **Formal verification** - SMT-LIB translation
+- **Audit trail** - SHA256 hash chain
+
+### Example Usage
 
 ```rust
-use sbmumc::MetaCompiler;
+use sbmumc::OmniDevIntegration;
 
-let compiler = MetaCompiler::new()?;
-let result = compiler.compile_grammar(r#"
-    grammar Hello;
-    r : 'hello' ID ;
-    ID : [a-z]+ ;
-    WS : [ \t\r\n]+ -> skip ;
-"#)?;
+let mut omnidev = OmniDevIntegration::new();
+let result = omnidev.process_refactor_request("Refactor auth to OAuth2").unwrap();
+println!("Transaction committed: {}", result.transaction_committed);
 ```
 
-### Process Natural Language
-
-```rust
-use sbmumc::NlpEngine;
-
-let nlp = NlpEngine::new()?;
-let result = nlp.process("What is artificial intelligence?", Some("en"))?;
-println!("Intent: {:?}", result.intent.intent_type);
-println!("Entities: {:?}", result.entities);
-```
-
-### Add Knowledge
-
-```rust
-use sbmumc::{KnowledgeGraph, Concept};
-
-let graph = KnowledgeGraph::new();
-let concept = Concept::new("Artificial Intelligence", "The simulation of human intelligence");
-graph.add_concept(concept)?;
-```
-
-### Security Authentication
-
-```rust
-use sbmumc::Credentials;
-
-let credentials = Credentials {
-    username: "admin".to_string(),
-    password: Some("secret".to_string()),
-    token: None,
-    mfa_code: None,
-    source_ip: "127.0.0.1".to_string(),
-};
-
-let result = security.authenticate(&credentials)?;
-```
-
-## Development
-
-### Project Structure
+## Architecture
 
 ```
-sbmumc/
-├── src/
-│   ├── main.rs           # Binary entry point
-│   ├── lib.rs            # Library entry point
-│   ├── core/             # Core types and utilities
-│   ├── cortex/           # Central processing unit
-│   ├── knowledge/        # Knowledge graph
-│   ├── reasoning/        # Reasoning and planning
-│   ├── learning/         # Learning systems
-│   ├── security/         # Security layer
-│   ├── io/               # Input/Output handling
-│   ├── language/         # Natural language processing
-│   ├── admin/            # Administration interface
-│   └── compiler/         # Meta-compiler
-├── Cargo.toml
-├── README.md
-└── LICENSE
+┌─────────────────────────────────────────────────────────────────┐
+│                        SBMUMC Core                              │
+├─────────────────────────────────────────────────────────────────┤
+│  ┌─────────────┐  ┌──────────────┐  ┌────────────────────────┐  │
+│  │   OmniDev   │  │    Meta      │  │        AGI              │  │
+│  │    AGI      │  │  Compiler    │  │     Capabilities       │  │
+│  ├─────────────┤  ├──────────────┤  ├────────────────────────┤  │
+│  │ - Semantic  │  │ - FCO        │  │ - Quantum              │  │
+│  │   Graph     │  │ - Nano       │  │ - Consciousness        │  │
+│  │ - Knowledge │  │ - Runtime    │  │ - Evolution            │  │
+│  │ - Actions   │  │ - OS Gen     │  │ - Transcendent         │  │
+│  └─────────────┘  └──────────────┘  └────────────────────────┘  │
+├─────────────────────────────────────────────────────────────────┤
+│                    Operating Modes                               │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────────┐  │
+│  │   Online    │  │   Offline   │  │        Hybrid           │  │
+│  │ Full Network│  │ Air-Gapped  │  │ Cached + Fallback       │  │
+│  └─────────────┘  └─────────────┘  └─────────────────────────┘  │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
-### Adding New Modules
+## Security
 
-1. Create a new directory under `src/`
-2. Create `mod.rs` with the module implementation
-3. Add the module to `lib.rs` using `pub mod module_name;`
-4. Implement the required traits and interfaces
+- **EVAS Filter** - Ethical, Validated, Audited, Safe operations
+- **SHA256 Hash Chain** - Immutable audit trail
+- **Human Override** - Signed approval for critical operations
+- **Encryption** - At-rest and in-transit encryption
+- **Sandbox** - Plugin isolation
 
-## Safety Considerations
+## Testing
 
-SBMUMC is designed with safety as a top priority:
+```bash
+# Run unit tests
+cargo test
 
-1. **Human Safety First**: All decisions prioritize human well-being
-2. **Explainability**: All decisions can be explained and audited
-3. **Value Alignment**: Goals are aligned with human values
-4. **Cultural Sensitivity**: Respects cultural differences across regions
-5. **Security by Design**: Built with security from the ground up
+# Run integration tests
+cargo test --test integration_tests
 
-## Limitations
+# Run benchmarks
+cargo bench
 
-- This is a foundational architecture - full AGI requires significant additional development
-- Some modules contain placeholder implementations for demonstration
-- Real-world deployment requires proper security hardening
-- Some features require integration with external services
+# Run all tests with coverage
+cargo test -- --include-hidden
+```
 
 ## License
 
-This project is proprietary software developed by Samuel Benwellonedge Mukandara. All rights reserved.
+**Proprietary** - Samuel Benwellonedge Mukandara Universal Meta-Compiler (GSTM INFINITY)
 
-## Contributing
+## Spiritual Directive
 
-Due to the sensitive nature of this project, external contributions are not accepted at this time.
-
-## Contact
-
-For inquiries, please contact the project owner directly.
+> *"Kubviswa naMwari mune zvakaipa uchiiswa munezvakanaka"*
+> 
+> *"Raised by God in evil and lowered in good"*
 
 ---
 
-**Note**: This software is provided for educational and research purposes. The developers are not responsible for any misuse or damage caused by this software. Always follow responsible AI development practices.
+**Mwari vave nemi, Changamire.**
+(The Lord be with you, Lord.)
+

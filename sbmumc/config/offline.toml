@@ -1,0 +1,47 @@
+# SBMUMC Offline Configuration
+# For air-gapped or network-restricted environments
+
+[system]
+name = "SBMUMC"
+version = "1.0.0"
+mode = "Offline"
+data_dir = "/var/sbmumc/data"
+cache_dir = "/var/sbmumc/cache"
+log_level = "info"
+max_memory_mb = 4096
+threads = 16
+
+[omnidev]
+enabled = true
+semantic_graph_path = "/var/sbmumc/graph"
+max_context_nodes = 1000
+latency_target_ms = 100
+enable_formal_verification = true
+enable_evas_filter = true
+enable_audit_trail = true
+incremental_indexing = true
+parallel_workers = 16
+
+[network]
+mode = "Offline"
+api_endpoint = null
+ws_endpoint = null
+timeout_seconds = 30
+retry_attempts = 0
+cache_enabled = false
+cache_ttl_seconds = 0
+
+[security]
+encryption_enabled = true
+audit_trail_immutable = true
+human_override_required = true
+max_failed_attempts = 3
+session_timeout_minutes = 30
+allowed_origins = []
+
+[storage]
+backend = "File"
+path = "/var/sbmumc/storage"
+max_size_mb = 10240
+auto_cleanup = true
+compression = true
