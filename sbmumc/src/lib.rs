@@ -1209,6 +1209,193 @@ pub use dimensional_magic::DimensionalMagicSystem;
 pub use soul_magic::SoulMagicSystem;
 
 // ============================================================================
+// OMNIDEV AGI MODULES (Files 1543-1560)
+// ============================================================================
+// Instantaneous, Holistic Software Development Agent System
+// - Global Semantic Graph Engine
+// - Knowledge Storage Layer
+// - Action Planner & Executor
+// - GitHub/IDE/Runtime Bridges
+// - Validation & Safety Layer
+// - Feedback Loop Monitor
+// - Code Comprehension
+// - Testing Framework
+// - Formal Verification
+// - EVAS Filter Layer
+// - Audit Trail System
+// - Omni IDE Bridge
+// - Live Feedback Loop
+// - Semantic Commit Engine
+// - Atomic Transaction
+// - Incremental Indexing Pipeline
+// ============================================================================
+
+// OmniDev Core - Central orchestration and state management
+pub mod omnidev_core;
+
+// Global Semantic Graph Engine - Hybrid vector + property graph storage
+pub mod semantic_graph_engine;
+
+// Knowledge Storage Layer - Unified vector/graph database
+pub mod knowledge_storage;
+
+// Action Planner & Executor - Planning with rollback support
+pub mod action_planner;
+
+// GitHub/IDE/Runtime Bridges - Multi-platform integration
+pub mod github_ide_bridges;
+
+// Validation & Safety Layer - Real-time policy enforcement
+pub mod validation_safety;
+
+// Feedback Loop Monitor - Metrics tracking and anomaly detection
+pub mod feedback_loop;
+
+// Code Comprehension - Architecture synthesis and behavioral simulation
+pub mod code_comprehension;
+
+// Testing Framework - Property-based testing and regression guard
+pub mod testing_framework;
+
+// Formal Verification Layer - SMT-LIB/Z3/Coq integration
+pub mod formal_verification;
+
+// EVAS Filter Layer - Ethical, Validated, Audited, Safe operations
+pub mod evas_filter;
+
+// Audit Trail System - SHA256-style hash chain logging
+pub mod audit_trail;
+
+// Omni IDE Bridge - LSP/DAP/WebSocket integration
+pub mod omni_ide_bridge;
+
+// Live Feedback Loop - Real-time event streaming
+pub mod live_feedback;
+
+// Semantic Commit Engine - Conventional commit generation
+pub mod semantic_commit;
+
+// Atomic Transaction - Atomic repository operations
+pub mod atomic_transaction;
+
+// Incremental Indexing Pipeline - AST/embedding for 20+ languages
+pub mod incremental_indexing;
+
+// OmniDev Integration - Master integration module
+pub mod omnidev_integration;
+
+// ============================================================================
+// OMNIDEV AGI RE-EXPORTS
+// ============================================================================
+
+// OmniDev Core
+pub use omnidev_core::{
+    OmniDevCore, OmniDevConfig, OmniDevState, OmniDevStatus,
+    SystemMetrics, PerformanceMetrics,
+};
+
+// Semantic Graph Engine
+pub use semantic_graph_engine::{
+    SemanticGraphEngine, GraphNode, GraphEdge, SemanticIndex,
+    SearchResult, ContextWindow, GraphStats,
+};
+
+// Knowledge Storage
+pub use knowledge_storage::{
+    KnowledgeStorageLayer, StoredKnowledge, KnowledgeQuery,
+    StorageBackend, QueryResult,
+};
+
+// Action Planner
+pub use action_planner::{
+    ActionPlan, ActionExecutor, ExecutionResult, PlannedAction,
+    ActionType, ActionStatus,
+};
+
+// GitHub/IDE Bridges
+pub use github_ide_bridges::{
+    GitHubBridge, IDEBridge, RuntimeBridge,
+    RepositoryContext, FileChange, CommitResult,
+};
+
+// Validation & Safety
+pub use validation_safety::{
+    ValidationLayer, ValidationReport, PolicyViolation,
+    ValidationSeverity, ValidationPolicy,
+};
+
+// Feedback Loop Monitor
+pub use feedback_loop::{
+    FeedbackLoopMonitor, MonitorMetrics, AnomalyAlert,
+    MetricType, AlertSeverity,
+};
+
+// Code Comprehension
+pub use code_comprehension::{
+    CodeComprehension, ArchitectureSynthesis, BehavioralModel,
+    ComprehensionMetrics, SemanticDrift,
+};
+
+// Testing Framework
+pub use testing_framework::{
+    TestSuite, RegressionGuard, GeneratedTest,
+    TestCoverage, RegressionResult,
+};
+
+// Formal Verification
+pub use formal_verification::{
+    FormalVerificationLayer, VerificationResult, FormalClaim,
+    VerificationMethod, ProofStatus,
+};
+
+// EVAS Filter
+pub use evas_filter::{
+    EVASFilterLayer, EVASReport, ThreatClassification,
+    PolicyCheck, SecurityFinding,
+};
+
+// Audit Trail
+pub use audit_trail::{
+    AuditLog, HumanOverride, AuditEntry,
+    OverrideApproval, AuditChain,
+};
+
+// Omni IDE Bridge
+pub use omni_ide_bridge::{
+    OmniIDEBridge, LspConnection, DapSession,
+    WebSocketStream, IdeCommand,
+};
+
+// Live Feedback
+pub use live_feedback::{
+    LiveFeedbackLoop, FeedbackEvent, Reaction,
+    FeedbackStream, EventType,
+};
+
+// Semantic Commit
+pub use semantic_commit::{
+    SemanticCommitEngine, SemanticCommit, PRDescription,
+    CommitType, CommitAnalysis,
+};
+
+// Atomic Transaction
+pub use atomic_transaction::{
+    RepoTransaction, TransactionResult, TransactionOperation,
+    TransactionStatus, RollbackResult,
+};
+
+// Incremental Indexing
+pub use incremental_indexing::{
+    IncrementalIndexingPipeline, IndexingResult, Symbol,
+    CallGraph, TypeInfo, Language,
+};
+
+// OmniDev Integration
+pub use omnidev_integration::{
+    OmniDevIntegration, RefactorResult, SystemStatusReport,
+};
+
+// ============================================================================
 // INFINITE SUPREMACY CAPABILITIES (Files 501-542)
 // ============================================================================
 
