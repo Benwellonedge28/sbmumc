@@ -1,0 +1,183 @@
+name: SBMUMC OmniDev Integration
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    types: [opened, synchronize, reopened]
+  workflow_dispatch:
+
+jobs:
+  sbmumc-analysis:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup SBMUMC
+        uses: sbmumc/setup-action@v1
+        with:
+          mode: hybrid
+          latency-target: 100
+
+      - name: Run OmniDev Analysis
+        run: |
+          sbmumc omnidev analyze \
+            --repo "${{ github.repository }}" \
+            --commit "${{ github.sha }}" \
+            --output report.json
+
+      - name: Upload Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbmumc-report
+          path: report.json
+
+  sbmumc-semantic-index:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Index Repository
+        run: |
+          sbmumc index \
+            --path . \
+            --semantic \
+            --incremental
+
+      - name: Upload Index
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbmumc-index
+          path: .sbmumc/index/
+
+  sbmumc-tests:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup SBMUMC
+        uses: sbmumc/setup-action@v1
+
+      - name: Generate Tests
+        run: |
+          sbmumc test generate \
+            --language rust \
+            --output tests/
+
+      - name: Run Tests
+        run: |
+          cargo test --manifest-path tests/Cargo.toml
+
+  sbmumc-security:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run EVAS Security Check
+        run: |
+          sbmumc security check \
+            --evas \
+            --secrets-scan \
+            --sbom
+
+      - name: Upload Security Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-report
+          path: .sbmumc/security-report.json
+
+  sbmumc-verification:
+    runs-on: ubuntu-latest
+    if: contains(github.event.head_commit.message, '[verify]')
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Formal Verification
+        run: |
+          sbmumc verify \
+            --claims safety,termination \
+            --prover z3
+
+      - name: Comment Results
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: 'SBMUMC Verification Complete: ${{ steps.verify.outputs.result }}'
+            })
+
+  sbmumc-audit:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Verify Audit Trail
+        run: |
+          sbmumc audit verify \
+            --chain-hash \
+            --immutable
+
+  sbmumc-commit-check:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check Commit Messages
+        run: |
+          sbmumc commit check \
+            --conventional \
+            --range HEAD~10..HEAD
+
+# GitHub Actions composite action for SBMUMC setup
+action:
+  name: Setup SBMUMC
+  description: Setup SBMUMC OmniDev AGI
+
+inputs:
+  mode:
+    description: Operating mode
+    default: hybrid
+  latency-target:
+    description: Target latency in ms
+    default: "100"
+
+runs:
+  using: composite
+  steps:
+    - name: Install SBMUMC
+      shell: bash
+      run: |
+        curl -sSL https://sbmumc.dev/install.sh | sh
+
+    - name: Configure
+      shell: bash
+      run: |
+        sbmumc config set mode ${{ inputs.mode }}
+        sbmumc config set latency-target ${{ inputs.latency-target }}
+
+    - name: Verify
+      shell: bash
+      run: sbmumc status

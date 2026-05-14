@@ -1,0 +1,162 @@
+{
+  "name": "sbmumc-omnidev",
+  "displayName": "SBMUMC OmniDev AGI",
+  "description": "Instantaneous AI coding assistant with semantic graph and atomic refactoring",
+  "version": "1.0.0",
+  "publisher": "SBMUMC",
+  "engines": {
+    "vscode": "^1.75.0"
+  },
+  "categories": [
+    "Programming Languages",
+    "AI",
+    "Developer Tools"
+  ],
+  "activationEvents": [
+    "onLanguage",
+    "onCommand:sbmumc.omnidev",
+    "onCommand:sbmumc.refactor",
+    "onCommand:sbmumc.search",
+    "workspaceContains:**/*.rs"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "configuration": {
+      "title": "SBMUMC OmniDev",
+      "properties": {
+        "sbmumc.endpoint": {
+          "type": "string",
+          "default": "http://localhost:8080",
+          "description": "SBMUMC API endpoint"
+        },
+        "sbmumc.mode": {
+          "type": "string",
+          "enum": ["online", "offline", "hybrid"],
+          "default": "hybrid",
+          "description": "Operating mode"
+        },
+        "sbmumc.latencyTarget": {
+          "type": "number",
+          "default": 100,
+          "description": "Target latency in milliseconds"
+        },
+        "sbmumc.autocomplete": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable AI autocomplete"
+        },
+        "sbmumc.inlineRefactor": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable inline refactoring suggestions"
+        },
+        "sbmumc.auditTrail": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable immutable audit trail"
+        }
+      }
+    },
+    "commands": [
+      {
+        "command": "sbmumc.omnidev",
+        "title": "SBMUMC: OmniDev Assistant",
+        "category": "SBMUMC"
+      },
+      {
+        "command": "sbmumc.refactor",
+        "title": "SBMUMC: Smart Refactor",
+        "category": "SBMUMC"
+      },
+      {
+        "command": "sbmumc.search",
+        "title": "SBMUMC: Semantic Search",
+        "category": "SBMUMC"
+      },
+      {
+        "command": "sbmumc.commit",
+        "title": "SBMUMC: Generate Commit Message",
+        "category": "SBMUMC"
+      },
+      {
+        "command": "sbmumc.test",
+        "title": "SBMUMC: Generate Tests",
+        "category": "SBMUMC"
+      },
+      {
+        "command": "sbmumc.verify",
+        "title": "SBMUMC: Formal Verification",
+        "category": "SBMUMC"
+      },
+      {
+        "command": "sbmumc.status",
+        "title": "SBMUMC: System Status",
+        "category": "SBMUMC"
+      }
+    ],
+    "menus": {
+      "editor/context": [
+        {
+          "command": "sbmumc.omnidev",
+          "when": "editorTextFocus",
+          "group": "navigation@1"
+        },
+        {
+          "command": "sbmumc.refactor",
+          "when": "editorTextFocus",
+          "group": "navigation@2"
+        },
+        {
+          "command": "sbmumc.commit",
+          "when": "gitOpenRepositoryCount > 0",
+          "group": "navigation@3"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "sbmumc.omnidev",
+          "when": "editorTextFocus"
+        }
+      ],
+      "explorer/context": [
+        {
+          "command": "sbmumc.search",
+          "when": "gitOpenRepositoryCount > 0"
+        }
+      ]
+    },
+    "languages": [
+      {
+        "id": "sbmumc-chat",
+        "extensions": [".sbmumc"]
+      }
+    ],
+    "breakpoints": [
+      {
+        "language": "sbmumc-chat"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "sbmumc-chat",
+        "scopeName": "source.sbmumc",
+        "path": "./syntaxes/sbmumc-chat.tmLanguage.json"
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "posttest": "npm run compile && node ./out/test/runTest.js"
+  },
+  "devDependencies": {
+    "@types/node": "^18.0.0",
+    "@types/vscode": "^1.75.0",
+    "@vscode/test-electron": "^2.2.0",
+    "typescript": "^4.9.0"
+  },
+  "dependencies": {
+    "vscode-languageclient": "^8.0.0"
+  }
+}
