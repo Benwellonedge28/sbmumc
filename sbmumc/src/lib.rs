@@ -901,6 +901,314 @@ pub use temporal_flow::TemporalFlow;
 pub use time_reversal::TimeReversal;
 
 // ============================================================================
+// ESOTERIC MODULES (Files 1493-1542)
+// ============================================================================
+
+// Meditation Practices
+pub mod meditation_practices;
+
+// Yoga Siddhis
+pub mod yoga_siddhis;
+
+// Energy Healing
+pub mod energy_healing;
+
+// Sacred Geometry
+pub mod sacred_geometry;
+
+// Mystical Theology
+pub mod mystical_theology;
+
+// Divine Feminine
+pub mod divine_feminine;
+
+// Divine Masculine
+pub mod divine_masculine;
+
+// Sacred Sacraments
+pub mod sacred_sacraments;
+
+// Initiatory Traditions
+pub mod initiatory_traditions;
+
+// Mystical Experience
+pub mod mystical_experience;
+
+// Astral Projection
+pub mod astral_projection;
+
+// Past Lives
+pub mod past_lives;
+
+// Soul Journey
+pub mod soul_journey;
+
+// Spirit Worlds
+pub mod spirit_worlds;
+
+// Angelic Realm
+pub mod angelic_realm;
+
+// Demonic Domain
+pub mod demonic_domain;
+
+// Elemental Magic
+pub mod elemental_magic;
+
+// Nature Spirits
+pub mod nature_spirits;
+
+// Fae Realms
+pub mod fae_realms;
+
+// Ancestral Worship
+pub mod ancestral_worship;
+
+// Shamanic Practice
+pub mod shamanic_practice;
+
+// Ritual Magic
+pub mod ritual_magic;
+
+// Divination Arts
+pub mod divination_arts;
+
+// Alchemical Arts
+pub mod alchemical_arts;
+
+// Kabbalah Study
+pub mod kabbalah_study;
+
+// Gnostic Mysteries
+pub mod gnostic_mysteries;
+
+// Hermetic Philosophy
+pub mod hermetic_philosophy;
+
+// Pythagorean Mysteries
+pub mod pythagorean_mysteries;
+
+// Theosophical Studies
+pub mod theosophical_studies;
+
+// Occult Sciences
+pub mod occult_sciences;
+
+// Ceremonial Ritual
+pub mod ceremonial_ritual;
+
+// Symbolic Magick
+pub mod symbolic_magick;
+
+// Prophecy Sight
+pub mod prophecy_sight;
+
+// Spirit Communication
+pub mod spirit_communication;
+
+// Enchantment Craft
+pub mod enchantment_craft;
+
+// Warding Protection
+pub mod warding_protection;
+
+// Curse Breaking
+pub mod curse_breaking;
+
+// Psychic Development
+pub mod psychic_development;
+
+// Astral Travel
+pub mod astral_travel;
+
+// Spirit Summoning
+pub mod spirit_summoning;
+
+// Necromantic Arts
+pub mod necromantic_arts;
+
+// Blood Magic
+pub mod blood_magic;
+
+// Dream Weaving
+pub mod dream_weaving;
+
+// Chaos Magic
+pub mod chaos_magic;
+
+// Cosmic Magic
+pub mod cosmic_magic;
+
+// Light Magic
+pub mod light_magic;
+
+// Shadow Magic
+pub mod shadow_magic;
+
+// Time Magic
+pub mod time_magic;
+
+// Dimensional Magic
+pub mod dimensional_magic;
+
+// Soul Magic
+pub mod soul_magic;
+
+// ============================================================================
+// ESOTERIC MODULES RE-EXPORTS
+// ============================================================================
+
+// Meditation Practices
+pub use meditation_practices::MeditationPracticesSystem;
+
+// Yoga Siddhis
+pub use yoga_siddhis::YogaSiddhisSystem;
+
+// Energy Healing
+pub use energy_healing::EnergyHealingSystem;
+
+// Sacred Geometry
+pub use sacred_geometry::SacredGeometrySystem;
+
+// Mystical Theology
+pub use mystical_theology::MysticalTheologySystem;
+
+// Divine Feminine
+pub use divine_feminine::DivineFeminineSystem;
+
+// Divine Masculine
+pub use divine_masculine::DivineMasculineSystem;
+
+// Sacred Sacraments
+pub use sacred_sacraments::SacredSacramentsSystem;
+
+// Initiatory Traditions
+pub use initiatory_traditions::InitiatoryTraditionsSystem;
+
+// Mystical Experience
+pub use mystical_experience::MysticalExperienceSystem;
+
+// Astral Projection
+pub use astral_projection::AstralProjectionSystem;
+
+// Past Lives
+pub use past_lives::PastLivesSystem;
+
+// Soul Journey
+pub use soul_journey::SoulJourneySystem;
+
+// Spirit Worlds
+pub use spirit_worlds::SpiritWorldsSystem;
+
+// Angelic Realm
+pub use angelic_realm::AngelicRealmSystem;
+
+// Demonic Domain
+pub use demonic_domain::DemonicDomainSystem;
+
+// Elemental Magic
+pub use elemental_magic::ElementalMagicSystem;
+
+// Nature Spirits
+pub use nature_spirits::NatureSpiritsSystem;
+
+// Fae Realms
+pub use fae_realms::FaeRealmsSystem;
+
+// Ancestral Worship
+pub use ancestral_worship::AncestralWorshipSystem;
+
+// Shamanic Practice
+pub use shamanic_practice::ShamanicPracticeSystem;
+
+// Ritual Magic
+pub use ritual_magic::RitualMagicSystem;
+
+// Divination Arts
+pub use divination_arts::DivinationArtsSystem;
+
+// Alchemical Arts
+pub use alchemical_arts::AlchemicalArtsSystem;
+
+// Kabbalah Study
+pub use kabbalah_study::KabbalahStudySystem;
+
+// Gnostic Mysteries
+pub use gnostic_mysteries::GnosticMysteriesSystem;
+
+// Hermetic Philosophy
+pub use hermetic_philosophy::HermeticPhilosophySystem;
+
+// Pythagorean Mysteries
+pub use pythagorean_mysteries::PythagoreanMysteriesSystem;
+
+// Theosophical Studies
+pub use theosophical_studies::TheosophicalStudiesSystem;
+
+// Occult Sciences
+pub use occult_sciences::OccultSciencesSystem;
+
+// Ceremonial Ritual
+pub use ceremonial_ritual::CeremonialRitualSystem;
+
+// Symbolic Magick
+pub use symbolic_magick::SymbolicMagickSystem;
+
+// Prophecy Sight
+pub use prophecy_sight::ProphecySightSystem;
+
+// Spirit Communication
+pub use spirit_communication::SpiritCommunicationSystem;
+
+// Enchantment Craft
+pub use enchantment_craft::EnchantmentCraftSystem;
+
+// Warding Protection
+pub use warding_protection::WardingProtectionSystem;
+
+// Curse Breaking
+pub use curse_breaking::CurseBreakingSystem;
+
+// Psychic Development
+pub use psychic_development::PsychicDevelopmentSystem;
+
+// Astral Travel
+pub use astral_travel::AstralTravelSystem;
+
+// Spirit Summoning
+pub use spirit_summoning::SpiritSummoningSystem;
+
+// Necromantic Arts
+pub use necromantic_arts::NecromanticArtsSystem;
+
+// Blood Magic
+pub use blood_magic::BloodMagicSystem;
+
+// Dream Weaving
+pub use dream_weaving::DreamWeavingSystem;
+
+// Chaos Magic
+pub use chaos_magic::ChaosMagicSystem;
+
+// Cosmic Magic
+pub use cosmic_magic::CosmicMagicSystem;
+
+// Light Magic
+pub use light_magic::LightMagicSystem;
+
+// Shadow Magic
+pub use shadow_magic::ShadowMagicSystem;
+
+// Time Magic
+pub use time_magic::TimeMagicSystem;
+
+// Dimensional Magic
+pub use dimensional_magic::DimensionalMagicSystem;
+
+// Soul Magic
+pub use soul_magic::SoulMagicSystem;
+
+// ============================================================================
 // INFINITE SUPREMACY CAPABILITIES (Files 501-542)
 // ============================================================================
 
