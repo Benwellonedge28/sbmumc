@@ -1586,7 +1586,32 @@ pub mod multitenancy;
 pub mod ai_assistant;
 
 // ============================================================================
-// NEW FEATURES RE-EXPORTS
+// NEW FEATURES MODULES (1579-1585)
+// ============================================================================
+
+// Module 1579: Documentation Generation
+pub mod documentation;
+
+// Module 1580: Search and Discovery
+pub mod search;
+
+// Module 1581: Reporting and BI
+pub mod reporting;
+
+// Module 1582: External Integration
+pub mod integration_external;
+
+// Module 1583: Task Scheduling
+pub mod scheduling;
+
+// Module 1584: Media Processing
+pub mod media;
+
+// Module 1585: Backup and Disaster Recovery
+pub mod backup;
+
+// ============================================================================
+// NEW FEATURES RE-EXPORTS (1561-1578)
 // ============================================================================
 
 // Collaboration
@@ -1692,6 +1717,53 @@ pub use multitenancy::{
 pub use ai_assistant::{
     AIProvider, AIModel, AIConversation, AIRequest, AIResponse,
     AIAssistantService,
+};
+
+// ============================================================================
+// NEW FEATURES RE-EXPORTS (1579-1585)
+// ============================================================================
+
+// Documentation
+pub use documentation::{
+    DocTarget, DocType, DocFormat, DocSection, DocConfig,
+    DocumentationService, GeneratedDoc, ApiEndpointDoc,
+    Diagram, CodeExample, KnowledgeEntry,
+};
+
+// Search
+pub use search::{
+    SearchIndex, IndexType, SearchResult, SearchQuery,
+    SearchService, Indexer, Ranker,
+};
+
+// Reporting
+pub use reporting::{
+    Report, ReportTemplate, ReportSchedule, DataSource,
+    ReportGenerator, ReportExporter,
+};
+
+// External Integration
+pub use integration_external::{
+    IntegrationAdapter, ExternalSystem, SyncJob, SyncConfig,
+    IntegrationManager, WebhookHandler,
+};
+
+// Scheduling
+pub use scheduling::{
+    ScheduledTask, TaskType, TaskSchedule, TaskExecution,
+    TaskScheduler, CronParser, CronSchedule,
+};
+
+// Media
+pub use media::{
+    MediaAsset, MediaType, ImageTransform, VideoTransform,
+    AudioTransform, MediaService, ProcessingJob, ThumbnailPreset,
+};
+
+// Backup
+pub use backup::{
+    BackupJob, BackupType, BackupSnapshot, RestorePoint,
+    BackupService, DisasterRecoveryPlan, BackupExecution,
 };
 
 // ============================================================================
