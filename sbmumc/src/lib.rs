@@ -1611,6 +1611,31 @@ pub mod media;
 pub mod backup;
 
 // ============================================================================
+// NEW FEATURES MODULES (1586-1592)
+// ============================================================================
+
+// Module 1586: DevOps Automation
+pub mod devops;
+
+// Module 1587: Observability & Distributed Tracing
+pub mod observability;
+
+// Module 1588: API Management & Rate Limiting
+pub mod api_gateway;
+
+// Module 1589: Workflow Orchestration & State Machines
+pub mod workflow_orchestration;
+
+// Module 1590: Message Queue & Event Streaming
+pub mod message_queue;
+
+// Module 1591: Configuration Management & Feature Flags
+pub mod config_management;
+
+// Module 1592: Data Pipeline & ETL
+pub mod data_pipeline;
+
+// ============================================================================
 // NEW FEATURES RE-EXPORTS (1561-1578)
 // ============================================================================
 
@@ -1764,6 +1789,56 @@ pub use media::{
 pub use backup::{
     BackupJob, BackupType, BackupSnapshot, RestorePoint,
     BackupService, DisasterRecoveryPlan, BackupExecution,
+};
+
+// ============================================================================
+// NEW FEATURES RE-EXPORTS (1586-1592)
+// ============================================================================
+
+// DevOps Automation
+pub use devops::{
+    Pipeline, PipelineExecution, PipelineStage, Deployment, DeploymentStrategy,
+    DevOpsService, IaCResource, InfrastructureTemplate, DevOpsStats,
+};
+
+// Observability & Distributed Tracing
+pub use observability::{
+    Trace, Span, Metric, MetricType, LogEntry, LogLevel,
+    ObservabilityService, Alert, AlertRule, Dashboard, Slo,
+    ServiceMap, SpanKind, SpanStatus,
+};
+
+// API Management & Rate Limiting
+pub use api_gateway::{
+    ApiKey, ApiEndpoint, ApiVersion, RateLimitConfig, RateLimitResult,
+    ApiGatewayService, RateLimitTier, ApiUsageAnalytics, RequestContext,
+};
+
+// Workflow Orchestration
+pub use workflow_orchestration::{
+    Workflow, WorkflowDefinition, StateMachine, Saga, SagaExecution,
+    WorkflowOrchestrator, WorkflowStatus, StateTransition, StateType,
+};
+
+// Message Queue & Event Streaming
+pub use message_queue::{
+    Message, Queue, Exchange, Subscription, ConsumerGroup,
+    MessageQueueService, QueueType, MessagePriority, DeliveryStatus,
+    DeadLetterEntry,
+};
+
+// Configuration Management & Feature Flags
+pub use config_management::{
+    FeatureFlag, TargetingRule, Experiment, ExperimentResult, EvaluationContext,
+    ConfigurationService, FlagState, FlagType, ExperimentStatus,
+    ConfigProfile, Segment,
+};
+
+// Data Pipeline & ETL
+pub use data_pipeline::{
+    DataPipeline, DataSource, DataSink, DataTransform, PipelineExecution,
+    EtlPipelineService, SchemaDefinition, DataQualityRule, QualityResult,
+    TransformType, PipelineStatus,
 };
 
 // ============================================================================
