@@ -1528,6 +1528,173 @@ pub use consciousness_mesh::ConsciousnessMesh;
 pub use universal_api_gateway::UniversalApiGateway;
 
 // ============================================================================
+// NEW FEATURES MODULES (1561-1578)
+// ============================================================================
+
+// Module 1561: Real-Time Collaboration
+pub mod collaboration;
+
+// Module 1562: AI-Powered Code Review
+pub mod code_review;
+
+// Module 1563: Observability & Metrics
+pub mod metrics;
+
+// Module 1564: ChatOps Integration
+pub mod chatops;
+
+// Module 1565: Advanced Security
+pub mod security_advanced;
+
+// Module 1566: Feature Flags
+pub mod feature_flags;
+
+// Module 1567: Time Travel & Version Control
+pub mod time_travel;
+
+// Module 1568: AI Code Generation
+pub mod ai_generation;
+
+// Module 1569: Analytics & Reporting
+pub mod analytics;
+
+// Module 1570: Workflow Automation
+pub mod workflow;
+
+// Module 1571: API Gateway
+pub mod gateway;
+
+// Module 1572: Notification System
+pub mod notification;
+
+// Module 1573: Job Queue
+pub mod job_queue;
+
+// Module 1574: Cache Management
+pub mod cache;
+
+// Module 1575: Event Streaming
+pub mod event_bus;
+
+// Module 1576: Graph Database
+pub mod graph_db;
+
+// Module 1577: Multi-Tenancy
+pub mod multitenancy;
+
+// Module 1578: AI Assistant Integration
+pub mod ai_assistant;
+
+// ============================================================================
+// NEW FEATURES RE-EXPORTS
+// ============================================================================
+
+// Collaboration
+pub use collaboration::{
+    CollaborationSession, Collaborator, CollaborationChange,
+    PresenceTracker, CollaborationService,
+};
+
+// Code Review
+pub use code_review::{
+    ReviewRequest, ReviewComment, CodeIssue, ReviewSummary,
+    CodeReviewEngine, AIReviewService,
+};
+
+// Metrics
+pub use metrics::{
+    MetricDefinition, MetricSample, Dashboard, AlertRule,
+    MetricsCollector, AlertManager, DashboardService,
+};
+
+// ChatOps
+pub use chatops::{
+    ChatMessage, SlashCommand, ChatOpsWorkflow, InteractiveButton,
+    ChatOpsService,
+};
+
+// Advanced Security
+pub use security_advanced::{
+    Secret, ThreatEvent, ZeroTrustPolicy, ComplianceRequirement,
+    SecretsManager, ThreatDetector, ZeroTrustEnforcer, ComplianceChecker,
+};
+
+// Feature Flags
+pub use feature_flags::{
+    FeatureFlag, TargetingRule, Experiment, ExperimentResult,
+    EvaluationContext, FeatureFlagService,
+};
+
+// Time Travel & Version Control
+pub use time_travel::{
+    Commit, Branch, Tag, MergeResult, TimeTravelCheckpoint,
+    VersionControl,
+};
+
+// AI Code Generation
+pub use ai_generation::{
+    GenerationRequest, GenerationResult, CodeTemplate, RefactoringSuggestion,
+    CodeGenerationService,
+};
+
+// Analytics & Reporting
+pub use analytics::{
+    DataPoint, AnalyticsDashboard, Report, TrendAnalysis, WidgetType,
+    AnalyticsService,
+};
+
+// Workflow Automation
+pub use workflow::{
+    Workflow, WorkflowStep, WorkflowExecution, StepType,
+    WorkflowBuilder,
+};
+
+// API Gateway
+pub use gateway::{
+    ApiRoute, ServiceConfig, Plugin, ApiGateway,
+};
+
+// Notification
+pub use notification::{
+    Notification, NotificationTemplate, NotificationChannel, NotificationService,
+};
+
+// Job Queue
+pub use job_queue::{
+    Job, JobPriority, JobResult, DeadLetterJob,
+    JobQueue,
+};
+
+// Cache Management
+pub use cache::{
+    CacheEntry, CacheConfig, CacheStats, CacheStore,
+    DistributedCache,
+};
+
+// Event Streaming
+pub use event_bus::{
+    Event, EventStream, Subscription, ConsumerGroup,
+    EventBus,
+};
+
+// Graph Database
+pub use graph_db::{
+    Node, Edge, Path, GraphPattern, GraphDatabase,
+};
+
+// Multi-Tenancy
+pub use multitenancy::{
+    Tenant, TenantUser, TenantProject, TenantPlan,
+    TenantManager,
+};
+
+// AI Assistant
+pub use ai_assistant::{
+    AIProvider, AIModel, AIConversation, AIRequest, AIResponse,
+    AIAssistantService,
+};
+
+// ============================================================================
 // RE-EXPORTS FOR COMMON TYPES
 // ============================================================================
 
