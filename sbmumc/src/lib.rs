@@ -643,6 +643,105 @@ pub use digitaltwin::{
 };
 
 // ============================================================================
+// ADVANCED AI/ML MODULES RE-EXPORTS
+// ============================================================================
+
+pub use neural_architecture_search::{
+    NeuralArchitectureSearch, ArchitectureConfig, SearchSpace,
+    EvaluationResult, NetworkSpec,
+};
+
+pub use explainable_ai::{
+    ExplainableAI, Explanation, ExplanationMethod, FeatureImportance,
+    XAIConfig, Counterfactual, ModelMetadata, Rule,
+};
+
+pub use cognitive_computing::{
+    CognitiveComputing, CognitiveModel, CognitiveTask, ThoughtProcess,
+    MentalModel, ReasoningTrace,
+};
+
+pub use edge_ai::{
+    EdgeAI, EdgeModel, InferenceConfig, EdgeDeployment,
+    LocalInference, ModelOptimization,
+};
+
+pub use federated_learning::{
+    FederatedLearning, ClientConfig, AggregationStrategy,
+    FedAvg, SecureAggregation, PrivacyBudget,
+};
+
+pub use homomorphic_encryption::{
+    HomomorphicEncryption, HeScheme, EncryptedOperation,
+    PublicKey, SecretKey, EvaluationKey,
+};
+
+pub use differential_privacy::{
+    DifferentialPrivacy, PrivacyMechanism, NoiseCalibration,
+    PrivacyBudget, PrivacyAccountant, Sensitivity,
+};
+
+pub use zero_knowledge_proofs::{
+    ZeroKnowledgeProof, ZKProtocol, Prover, Verifier,
+    Statement, Witness, ProofSystem,
+};
+
+pub use secure_multi_party::{
+    SecureMultiParty, MPCProtocol, SecretShare,
+    GarbledCircuit, FunctionEvaluation,
+};
+
+pub use blockchain::{
+    Blockchain, Block, Transaction, SmartContract,
+    ConsensusMechanism, ChainValidation, MerkleTree,
+};
+
+pub use edge_computing::{
+    EdgeComputing, EdgeNode, EdgeCluster, WorkloadDistribution,
+    LatencyOptimization, ResourceAllocation,
+};
+
+pub use neuromorphic_computing::{
+    NeuromorphicComputing, SpikingNeuralNet, NeuronModel,
+    PlasticityRule, SynapticChannel, BrainScale,
+};
+
+pub use quantum_internet::{
+    QuantumInternet, QuantumNode, EntanglementPool,
+    QuantumChannel, TeleportationProtocol, Repeater,
+};
+
+pub use quantum_cryptography_new::{
+    QuantumCryptography, QKD, QuantumKeyDistribution,
+    PhotonState, BB84Protocol, E91Protocol,
+};
+
+pub use swarm_intelligence::{
+    SwarmIntelligence, SwarmAgent, CollectiveBehavior,
+    PheromoneMap, EmergentPattern, Stigmergy,
+};
+
+pub use autonomous_vehicles::{
+    AutonomousVehicles, VehicleControl, PathPlanning,
+    SensorFusion, ObstacleAvoidance, TrafficCoordination,
+};
+
+pub use ambient_intelligence::{
+    AmbientIntelligence, ContextAwareness, ProactiveAssistance,
+    UbiquitousComputing, AmbientDisplay, SmartEnvironment,
+};
+
+pub use brain_computer_interface::{
+    BrainComputerInterface, NeuralSignal, BCICommand,
+    SignalProcessing, Neurofeedback, MentalState,
+};
+
+pub use digital_twin::{
+    DigitalTwin, TwinSynchronization, PhysicsSimulation,
+    PredictiveModel, ScenarioPlanning, IoTIntegration,
+};
+
+// ============================================================================
 // TRANSCENDENT & FRONTIER CAPABILITIES RE-EXPORTS
 // ============================================================================
 
@@ -771,6 +870,34 @@ pub use exoplanetary_adaptation::{
     ExoplanetaryAdaptation, AlienEnvironment, AdaptationLayer,
     NonTuringModel, ContactAttempt, CosmicConnection,
 };
+
+// ============================================================================
+// ADVANCED AI/ML MODULES
+// ============================================================================
+
+pub mod neural_architecture_search;
+pub mod explainable_ai;
+pub mod cognitive_computing;
+pub mod edge_ai;
+
+pub mod federated_learning;
+pub mod homomorphic_encryption;
+pub mod differential_privacy;
+pub mod zero_knowledge_proofs;
+pub mod secure_multi_party;
+
+pub mod blockchain;
+
+pub mod edge_computing;
+pub mod neuromorphic_computing;
+pub mod quantum_internet;
+pub mod quantum_cryptography_new;
+
+pub mod swarm_intelligence;
+pub mod autonomous_vehicles;
+pub mod ambient_intelligence;
+pub mod brain_computer_interface;
+pub mod digital_twin;
 
 // ============================================================================
 // TIME & SPACETIME MODULES (Files 476-500)
