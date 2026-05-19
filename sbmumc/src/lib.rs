@@ -760,6 +760,17 @@ pub use hdl_support::{
     DesignUnit, DataType, Signal, Register, Memory,
 };
 
+// Programming language development - supremely autonomous, production-ready
+pub use programming_language_development::{
+    PlDevelopmentEngine, LanguageSpec, LanguageInstance,
+    Grammar, GrammarRule, TypeSystemSpec, SemanticsSpec,
+    LanguageFeatures, CompilationTarget, SecurityPolicy,
+    IrModule, IrFunction, IrBlock, IrInstruction, IrType,
+    OptimizationPipeline, OptimizationPass, CodeGeneratorSpec,
+    CompilationResult, TypedAst, DslEmbedder, HotReloader,
+    LanguageTestFramework, TestResults,
+};
+
 // ============================================================================
 // TRANSCENDENT & FRONTIER CAPABILITIES RE-EXPORTS
 // ============================================================================
@@ -921,6 +932,8 @@ pub mod digital_twin;
 pub mod multimodal_content_generation;
 
 pub mod hdl_support;
+
+pub mod programming_language_development;
 
 // ============================================================================
 // TIME & SPACETIME MODULES (Files 476-500)
