@@ -741,6 +741,14 @@ pub use digital_twin::{
     PredictiveModel, ScenarioPlanning, IoTIntegration,
 };
 
+// Multi-modal content generation
+pub use multimodal_content_generation::{
+    ContentGenerator, ContentRequest, GeneratedContent,
+    Modality, Content, GenerationParameters, GenerationQuality,
+    GenerationError, MultiModalTranslator, ContentOptimizer,
+    ConsistencyManager, StreamingGenerator, ContentChunk,
+};
+
 // ============================================================================
 // TRANSCENDENT & FRONTIER CAPABILITIES RE-EXPORTS
 // ============================================================================
@@ -898,6 +906,8 @@ pub mod autonomous_vehicles;
 pub mod ambient_intelligence;
 pub mod brain_computer_interface;
 pub mod digital_twin;
+
+pub mod multimodal_content_generation;
 
 // ============================================================================
 // TIME & SPACETIME MODULES (Files 476-500)
