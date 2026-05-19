@@ -749,6 +749,17 @@ pub use multimodal_content_generation::{
     ConsistencyManager, StreamingGenerator, ContentChunk,
 };
 
+// HDL support for all hardware description languages
+pub use hdl_support::{
+    HdlSupport, HdlLanguage, HdlAst, HdlError,
+    ParseRequest, ParseResult, ParseError,
+    CodeGenRequest, CodeGenResult, CodeGenError,
+    TranslateRequest, TranslateResult,
+    SynthesisOutput, ResourceUsage,
+    TestbenchGenerator, TestbenchConfig, VerificationReport,
+    DesignUnit, DataType, Signal, Register, Memory,
+};
+
 // ============================================================================
 // TRANSCENDENT & FRONTIER CAPABILITIES RE-EXPORTS
 // ============================================================================
@@ -908,6 +919,8 @@ pub mod brain_computer_interface;
 pub mod digital_twin;
 
 pub mod multimodal_content_generation;
+
+pub mod hdl_support;
 
 // ============================================================================
 // TIME & SPACETIME MODULES (Files 476-500)
