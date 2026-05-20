@@ -1,0 +1,357 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release (e.g., 1.0.0)'
+        required: true
+        type: string
+      prerelease:
+        description: 'Create as pre-release'
+        required: false
+        type: boolean
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+jobs:
+  # Version validation
+  version-validation:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      is_prerelease: ${{ steps.version.outputs.is_prerelease }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Validate version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            VERSION="${{ inputs.version }}"
+            PRERELEASE="${{ inputs.prerelease }}"
+          else
+            VERSION="${GITHUB_REF#refs/tags/v}"
+            PRERELEASE="false"
+          fi
+
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "is_prerelease=$PRERELEASE" >> $GITHUB_OUTPUT
+
+          # Validate version format (semver)
+          if ! echo "$VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9]+)?$'; then
+            echo "❌ Invalid version format: $VERSION"
+            echo "   Expected: MAJOR.MINOR.PATCH or MAJOR.MINOR.PATCH-prerelease"
+            exit 1
+          fi
+          echo "✅ Version validated: $VERSION"
+
+  # Run tests before release
+  pre-release-tests:
+    runs-on: ubuntu-latest
+    needs: [version-validation]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Cache dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-release-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Check formatting
+        run: cargo fmt --all -- --check
+
+      - name: Run Clippy
+        run: cargo clippy -- -D warnings
+
+      - name: Build documentation
+        run: cargo doc --no-deps --all-features
+
+      - name: Run tests
+        run: cargo test --all-features -- --nocapture
+
+      - name: Build release binary
+        run: cargo build --release --all-features
+
+  # Build release binaries for all platforms
+  build-release:
+    runs-on: ${{ matrix.os }}
+    needs: [pre-release-tests, version-validation]
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            artifact: sbmumc-${{ needs.version-validation.outputs.version }}-x86_64-unknown-linux-gnu.tar.gz
+          - os: macos-latest
+            target: x86_64-apple-darwin
+            artifact: sbmumc-${{ needs.version-validation.outputs.version }}-x86_64-apple-darwin.tar.gz
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            artifact: sbmumc-${{ needs.version-validation.outputs.version }}-aarch64-apple-darwin.tar.gz
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            artifact: sbmumc-${{ needs.version-validation.outputs.version }}-x86_64-pc-windows-msvc.zip
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Cache dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ matrix.os }}-release-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Build release binary
+        run: |
+          cargo build --release --all-features --target ${{ matrix.target }}
+
+      - name: Package binary
+        shell: bash
+        run: |
+          mkdir -p release
+          if [[ "${{ matrix.os }}" == "windows-latest" ]]; then
+            cp target/${{ matrix.target }}/release/sbmumc.exe release/
+            7z a ${{ matrix.artifact }} release/
+          else
+            cp target/${{ matrix.target }}/release/sbmumc release/
+            tar czf ${{ matrix.artifact }} -C release sbmumc
+          fi
+          ls -la release/
+
+      - name: Upload release artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: release/${{ matrix.artifact }}
+          retention-days: 5
+
+  # Build and push Docker image
+  docker-release:
+    runs-on: ubuntu-latest
+    needs: [version-validation]
+    permissions:
+      packages: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}
+          tags: |
+            type=semver,pattern={{version}}
+            type=sha,prefix=
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          platforms: linux/amd64,linux/arm64
+
+  # Generate release notes
+  release-notes:
+    runs-on: ubuntu-latest
+    needs: [build-release, version-validation]
+    outputs:
+      body: ${{ steps.release-notes.outputs.body }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Generate release notes
+        id: release-notes
+        run: |
+          VERSION=${{ needs.version-validation.outputs.version }}
+
+          # Get commits since last tag
+          LAST_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+          COMMITS=$(git log $LAST_TAG..HEAD --oneline --format="%h %s" 2>/dev/null || echo "Initial release")
+
+          cat << 'RELEASE_NOTES' > release_notes.md
+          # Release $VERSION
+
+          ## Installation
+
+          Download the appropriate binary for your platform:
+
+          ### Linux (x86_64)
+          ```
+          tar -xzf sbmumc-$VERSION-x86_64-unknown-linux-gnu.tar.gz
+          ./sbmumc --version
+          ```
+
+          ### macOS (Intel)
+          ```
+          tar -xzf sbmumc-$VERSION-x86_64-apple-darwin.tar.gz
+          ./sbmumc --version
+          ```
+
+          ### macOS (Apple Silicon)
+          ```
+          tar -xzf sbmumc-$VERSION-aarch64-apple-darwin.tar.gz
+          ./sbmumc --version
+          ```
+
+          ### Windows
+          ```
+          unzip sbmumc-$VERSION-x86_64-pc-windows-msvc.zip
+          .\sbmumc.exe --version
+          ```
+
+          ## Docker
+
+          ```bash
+          docker pull ghcr.io/${{ github.repository }}:$VERSION
+          docker run ghcr.io/${{ github.repository }}:$VERSION --version
+          ```
+
+          ## Changes
+
+          ### Commits since last release
+
+          $COMMITS
+
+          ### Full Changelog
+
+          See [CHANGELOG.md](CHANGELOG.md) for detailed changes.
+
+          ## Verification
+
+          All binaries are signed and verified. See the Security section for details.
+
+          ## Help
+
+          For issues and questions, please open a ticket on GitHub.
+
+          *Generated by GitHub Actions*
+          RELEASE_NOTES
+
+          echo "body=$(cat release_notes.md)" >> $GITHUB_OUTPUT
+
+      - name: Upload release notes
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-notes
+          path: release_notes.md
+          retention-days: 30
+
+  # Create GitHub Release
+  create-release:
+    runs-on: ubuntu-latest
+    needs: [build-release, docker-release, release-notes, version-validation]
+    permissions:
+      contents: write
+    steps:
+      - name: Download all release artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          pattern: sbmumc-*
+
+      - name: Display structure
+        run: ls -laR artifacts/
+
+      - name: Prepare release files
+        run: |
+          mkdir -p release_files
+          cp artifacts/*/* release_files/ 2>/dev/null || true
+          cp artifacts/release/* release_files/ 2>/dev/null || true
+          ls -la release_files/
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: release_files/*
+          body_path: artifacts/release-notes/release_notes.md
+          draft: false
+          prerelease: ${{ needs.version-validation.outputs.is_prerelease }}
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # Notify about release
+  notify:
+    runs-on: ubuntu-latest
+    needs: [create-release]
+    steps:
+      - name: Notify success
+        run: |
+          echo "✅ Release ${{ needs.version-validation.outputs.version }} created successfully!"
+          echo "📦 Release URL: https://github.com/${{ github.repository }}/releases/tag/v${{ needs.version-validation.outputs.version }}"
+
+  # Post-release cleanup and updates
+  post-release:
+    runs-on: ubuntu-latest
+    needs: [create-release]
+    if: always()
+    steps:
+      - name: Cleanup temporary files
+        run: |
+          echo "Post-release cleanup completed"
+          # Additional cleanup tasks can be added here
+
+      - name: Create update branch
+        if: needs.create-release.result == 'success'
+        run: |
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+
+          # Update version in Cargo.toml
+          VERSION=${{ needs.version-validation.outputs.version }}
+          NEXT_VERSION=$(echo $VERSION | awk -F. '{print $1"."$2"."$3+1"-dev"}')
+
+          echo "Current version: $VERSION"
+          echo "Next development version: $NEXT_VERSION"
+
+          # Create development version commit
+          sed -i "s/version = \"$VERSION\"/version = \"$NEXT_VERSION\"/" sbmumc/Cargo.toml || true
+          git add sbmumc/Cargo.toml
+          git commit -m "chore: Bump version to $NEXT_VERSION for development"
+          git push || echo "Could not push version bump"

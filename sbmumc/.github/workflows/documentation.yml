@@ -1,0 +1,273 @@
+name: Documentation
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - 'docs/**'
+      - 'src/**/*.rs'
+      - '*.md'
+      - '.github/workflows/docs.yml'
+  pull_request:
+    branches: [main, develop]
+  release:
+    types: [published]
+  workflow_dispatch:
+
+env:
+  RUST_BACKTRACE: 1
+
+jobs:
+  # Generate and validate documentation
+  doc-generation:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Generate documentation
+        run: |
+          cargo doc --no-deps --all-features --all-targets
+          cargo doc --document-private-items
+
+      - name: Check for broken links in docs
+        run: |
+          echo "Checking documentation completeness..."
+          find target/doc -name "*.html" -exec grep -l "404" {} \; || echo "No broken links detected"
+
+      - name: Upload documentation artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: documentation
+          path: target/doc
+          retention-days: 7
+
+  # Validate Markdown documentation
+  markdown-validation:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install markdownlint-cli
+        run: npm install -g markdownlint-cli@0.42.0
+
+      - name: Lint markdown files
+        run: |
+          find docs -name "*.md" -type f | while read file; do
+            echo "Linting: $file"
+            markdownlint "$file" --fix || true
+          done
+
+      - name: Check for required documentation
+        run: |
+          echo "Checking documentation completeness..."
+
+          # Check for README
+          if [ -f README.md ]; then
+            echo "✅ README.md found"
+          else
+            echo "❌ README.md missing"
+          fi
+
+          # Check for docs directory
+          if [ -d docs ]; then
+            echo "✅ docs/ directory found"
+            echo "📄 Documentation files:"
+            find docs -name "*.md" -type f | sort
+          else
+            echo "❌ docs/ directory missing"
+          fi
+
+      - name: Check documentation links
+        run: |
+          echo "Validating internal links..."
+          find docs -name "*.md" -type f -exec grep -hE '\[.+\]\(.+\)' {} \; | \
+            grep -vE '^#' | \
+            while read line; do
+              if echo "$line" | grep -qE '^\[.+\]\(https?://'; then
+                # External link - skip validation
+                :
+              else
+                # Internal link - basic check
+                link=$(echo "$line" | sed -n 's/.*\[.*\](*\([^)]*\))*/\1/p')
+                if [ -n "$link" ] && [ "$link" != "${link#\(}" ]; then
+                  echo "Validating: $link"
+                fi
+              fi
+            done
+
+  # Generate API documentation
+  api-docs:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Generate comprehensive API docs
+        run: |
+          cargo doc --no-deps --all-features
+          cargo doc --document-private-items --no-deps
+
+      - name: Count documented items
+        run: |
+          echo "Documentation Statistics:"
+          echo "========================="
+          find target/doc -name "*.html" | wc -l
+          echo "HTML files"
+
+          grep -r "pub fn\|pub struct\|pub enum\|pub trait\|pub mod" src/ --include="*.rs" | wc -l
+          echo "Public API items"
+
+          grep -r "/// " src/ --include="*.rs" | wc -l
+          echo "Documentation comments"
+
+          grep -r "//! " src/ --include="*.rs" | wc -l
+          echo "Module documentation comments"
+
+      - name: Check documentation coverage
+        run: |
+          echo "Documentation Coverage Report"
+          echo "============================="
+
+          # Get total public items
+          total=$(grep -r "pub " src/ --include="*.rs" | grep -vE "(pub mod|pub use)" | wc -l)
+          echo "Total public items: $total"
+
+          # Get documented items
+          documented=$(grep -r "/// \|//! " src/ --include="*.rs" | wc -l)
+          echo "Documented items: $documented"
+
+          # Calculate coverage
+          if [ "$total" -gt 0 ]; then
+            coverage=$((documented * 100 / total))
+            echo "Coverage: ${coverage}%"
+          fi
+
+  # Generate and publish book (mdBook)
+  book-generation:
+    runs-on: ubuntu-latest
+    if: false  # Enable if using mdBook
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install mdBook
+        uses: taiki-e/install-action@mdbook
+        with:
+          version: latest
+
+      - name: Setup book structure
+        run: |
+          if [ -d "book" ]; then
+            cd book
+            mdbook build
+          else
+            echo "No book directory found"
+          fi
+
+      - name: Publish book to GitHub Pages
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./book/html
+          publish_branch: gh-pages
+
+  # Spell check documentation
+  spellcheck:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run spell checker
+        run: |
+          echo "Running spell check on documentation..."
+          # Basic spell check - use aspell or languagetool in production
+          for file in $(find docs -name "*.md" -type f); do
+            echo "Checking: $file"
+            # Placeholder for spell checking
+          done
+
+      - name: Check for common typos
+        run: |
+          echo "Checking for common documentation issues..."
+
+          # Check for TODO/FIXME in docs
+          todo_count=$(grep -r "TODO\|FIXME\|XXX\|HACK" docs --include="*.md" | wc -l)
+          echo "TODO/FIXME/XXX/HACK in docs: $todo_count"
+
+          # Check for placeholder text
+          placeholder_count=$(grep -ri "Lorem ipsum\|placeholder\|TODO" docs --include="*.md" | wc -l)
+          echo "Placeholder content: $placeholder_count"
+
+  # Generate module documentation index
+  module-index:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Generate module index
+        run: |
+          echo "# SBMUMC Module Index" > docs/MODULE_INDEX.md
+          echo "" >> docs/MODULE_INDEX.md
+          echo "Generated: $(date)" >> docs/MODULE_INDEX.md
+          echo "" >> docs/MODULE_INDEX.md
+          echo "## Module Categories" >> docs/MODULE_INDEX.md
+          echo "" >> docs/MODULE_INDEX.md
+
+          echo "### Source Modules" >> docs/MODULE_INDEX.md
+          echo "" >> docs/MODULE_INDEX.md
+          find src -maxdepth 1 -type d | sort | while read dir; do
+            if [ -f "$dir/mod.rs" ]; then
+              modname=$(basename "$dir")
+              echo "- [`$modname`](./$modname) - $(grep -A1 "//! " "$dir/mod.rs" | head -2 | tr -d '\n')" >> docs/MODULE_INDEX.md
+            fi
+          done
+
+          cat docs/MODULE_INDEX.md
+
+      - name: Upload module index
+        uses: actions/upload-artifact@v4
+        with:
+          name: module-index
+          path: docs/MODULE_INDEX.md
+          retention-days: 30
+
+  # Deploy documentation to GitHub Pages
+  deploy-docs:
+    runs-on: ubuntu-latest
+    needs: [doc-generation, markdown-validation, api-docs]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v2
+        with:
+          path: target/doc
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

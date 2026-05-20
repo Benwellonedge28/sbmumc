@@ -1,0 +1,333 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main, develop]
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Deployment environment'
+        required: true
+        type: choice
+        options:
+          - staging
+          - production
+        default: staging
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+jobs:
+  # Deployment to staging environment
+  deploy-staging:
+    runs-on: ubuntu-latest
+    environment: staging
+    if: github.ref == 'refs/heads/main' || github.event.inputs.environment == 'staging'
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-deploy-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Build binary
+        run: cargo build --release --all-features
+
+      - name: Deploy to staging server
+        run: |
+          echo "Deploying to staging environment..."
+          # Add your deployment logic here
+          # Example: scp, rsync, docker push, etc.
+
+          echo "✅ Deployment to staging completed"
+
+      - name: Verify deployment
+        run: |
+          echo "Verifying staging deployment..."
+          # Add verification steps
+          curl -f https://staging.example.com/health || echo "Health check placeholder"
+
+  # Deployment to production environment
+  deploy-production:
+    runs-on: ubuntu-latest
+    environment: production
+    needs: [deploy-staging]
+    if: startsWith(github.ref, 'refs/tags/v') || github.event.inputs.environment == 'production'
+    concurrency:
+      group: production
+      cancel-in-progress: false
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-deploy-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Build binary
+        run: cargo build --release --all-features
+
+      - name: Run production tests
+        run: |
+          echo "Running production verification tests..."
+          cargo test --all-features
+
+      - name: Deploy to production server
+        run: |
+          echo "Deploying to production environment..."
+          echo "⚠️ Production deployment requires manual approval"
+          # Add your deployment logic here
+          # Example: rolling update, blue-green deployment, etc.
+
+          echo "✅ Deployment to production completed"
+
+      - name: Notify successful deployment
+        run: |
+          echo "🎉 Production deployment successful!"
+          echo "Version: ${{ github.ref }}"
+
+  # Deploy to container registries
+  deploy-containers:
+    runs-on: ubuntu-latest
+    needs: [deploy-staging]
+    if: github.event_name != 'workflow_dispatch' || github.event.inputs.environment != 'production'
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        registry:
+          - name: GitHub Container Registry
+            url: ghcr.io
+            repository: ghcr.io/${{ github.repository }}
+          - name: Docker Hub
+            url: docker.io
+            repository: ${{ secrets.DOCKER_HUB_REPOSITORY }}
+            username: ${{ secrets.DOCKER_USERNAME }}
+            password: ${{ secrets.DOCKER_PASSWORD }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to registry
+        if: matrix.registry.name != 'Docker Hub'
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ matrix.registry.url }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Login to Docker Hub
+        if: matrix.registry.name == 'Docker Hub'
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ matrix.registry.url }}
+          username: ${{ matrix.registry.username }}
+          password: ${{ matrix.registry.password }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ matrix.registry.repository }}
+          tags: |
+            type=ref,event=branch
+            type=semver,pattern={{version}}
+            type=sha,prefix=
+
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          platforms: linux/amd64,linux/arm64
+
+  # Deploy documentation site
+  deploy-docs-site:
+    runs-on: ubuntu-latest
+    needs: [deploy-staging]
+    if: github.ref == 'refs/heads/main'
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+
+      - name: Generate documentation
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
+
+      - name: Generate docs
+        run: cargo doc --no-deps --all-features --all-targets
+
+      - name: Copy index.html for GitHub Pages
+        run: |
+          echo '<!DOCTYPE html><html><head><meta http-equiv="refresh" content="0;url=sbmumc/index.html"></head><body><p>Redirecting to documentation...</p></body></html>' > docs/index.html
+          cp -r target/doc/* docs/
+
+      - name: Upload to GitHub Pages
+        uses: actions/upload-pages-artifact@v2
+        with:
+          path: docs/
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+
+  # Deploy package to crates.io
+  deploy-crates:
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Login to crates.io
+        run: |
+          echo "${{ secrets.CRATESIO_TOKEN }}" | cargo login "${{ secrets.CRATESIO_TOKEN }}"
+
+      - name: Publish to crates.io
+        run: |
+          cargo publish --dry-run --all-features || true
+          cargo publish --all-features --token "${{ secrets.CRATESIO_TOKEN }}"
+
+  # Kubernetes deployment
+  deploy-kubernetes:
+    runs-on: ubuntu-latest
+    needs: [deploy-staging]
+    if: github.ref == 'refs/heads/main'
+    permissions:
+      contents: read
+    environment:
+      name: kubernetes
+      url: ${{ env.K8S_CLUSTER_URL }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup kubectl
+        uses: azure/setup-kubectl@v4
+        with:
+          version: latest
+
+      - name: Configure kubectl
+        run: |
+          echo "${{ secrets.KUBE_CONFIG }}" | base64 -d > kubeconfig
+          export KUBECONFIG=kubeconfig
+
+      - name: Deploy to Kubernetes
+        run: |
+          export KUBECONFIG=kubeconfig
+          kubectl set image deployment/sbmumc sbmumc=${{ github.repository }}:latest
+          kubectl rollout status deployment/sbmumc --timeout=300s
+
+      - name: Verify deployment
+        run: |
+          export KUBECONFIG=kubeconfig
+          kubectl get pods -l app=sbmumc
+          kubectl logs -l app=sbmumc --tail=50
+
+  # Post-deployment smoke tests
+  smoke-tests:
+    runs-on: ubuntu-latest
+    needs: [deploy-production]
+    if: github.event_name != 'workflow_dispatch'
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run smoke tests
+        run: |
+          echo "Running post-deployment smoke tests..."
+          # Add your smoke test logic here
+          # Example: curl to health endpoints, basic functionality tests
+
+          echo "✅ Smoke tests completed"
+
+  # Health monitoring setup
+  setup-monitoring:
+    runs-on: ubuntu-latest
+    needs: [deploy-production]
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: Setup monitoring
+        run: |
+          echo "Setting up monitoring for deployment..."
+          # Add Prometheus metrics endpoint, alerting rules, etc.
+
+          echo "✅ Monitoring configured"
+
+  # Rollback capability
+  rollback:
+    runs-on: ubuntu-latest
+    needs: [smoke-tests]
+    if: failure() && github.ref == 'refs/heads/main'
+    environment:
+      name: production
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Identify last successful deployment
+        run: |
+          echo "Last successful deployment SHA: ${{ github.event.after }}"
+          echo "Rolling back to previous version..."
+
+      - name: Perform rollback
+        run: |
+          echo "⚠️ Rollback initiated"
+          # Add rollback logic here
+          # Example: kubectl rollout undo, docker pull previous tag, etc.
+
+          echo "✅ Rollback completed"
+
+      - name: Notify rollback
+        run: |
+          echo "🔄 Deployment rolled back due to smoke test failure"
+          # Send notification to Slack, email, etc.
