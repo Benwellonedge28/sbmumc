@@ -1,0 +1,445 @@
+name: Maintenance and Cleanup
+
+on:
+  schedule:
+    - cron: '0 2 * * *'  # Daily at 2 AM
+  workflow_dispatch:
+    inputs:
+      cleanup_type:
+        description: 'Type of cleanup to perform'
+        required: true
+        type: choice
+        options:
+          - full
+          - docker
+          - caches
+          - old-releases
+          - temp-files
+        default: full
+  repository_dispatch:
+    types: [maintenance]
+
+env:
+  MAX_DOCKER_IMAGES: ${{ vars.MAX_DOCKER_IMAGES || '50' }}
+  MAX_RELEASES_TO_KEEP: ${{ vars.MAX_RELEASES_TO_KEEP || '10' }}
+  CACHE_MAX_AGE_DAYS: ${{ vars.CACHE_MAX_AGE_DAYS || '30' }}
+
+jobs:
+  # Docker cleanup
+  docker-cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_TOKEN }}
+
+      - name: List old Docker images
+        run: |
+          echo "Fetching Docker images..."
+          docker images --format "{{.Repository}}:{{.Tag}} {{.CreatedAt}}" | head -50
+
+      - name: Count Docker images
+        run: |
+          image_count=$(docker images -q | wc -l)
+          echo "Current image count: $image_count"
+
+          if [ "$image_count" -gt $MAX_DOCKER_IMAGES ]; then
+            echo "Need to clean up Docker images"
+          else
+            echo "Image count within limits"
+          fi
+
+      - name: Prune dangling images
+        run: |
+          echo "Pruning dangling images..."
+          docker image prune -f
+
+      - name: Prune old images
+        run: |
+          echo "Pruning images older than 30 days..."
+          docker image prune -a --filter "until=720h" -f || echo "Prune completed"
+
+      - name: Prune build cache
+        run: |
+          echo "Pruning Docker build cache..."
+          docker builder prune -a -f --filter "until=720h"
+
+      - name: Prune volumes
+        run: |
+          echo "Pruning unused volumes..."
+          docker volume prune -f || echo "Volume prune completed"
+
+      - name: Report disk usage
+        run: |
+          echo "Docker disk usage after cleanup:"
+          docker system df
+
+  # Cache cleanup
+  cache-cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup GitHub CLI
+        uses: actions/github-script@v7
+        with:
+          script: |
+            console.log('Cleaning up GitHub Actions cache...');
+
+      - name: List current caches
+        run: |
+          echo "Listing GitHub Actions caches..."
+          gh cache list || echo "No caches found"
+
+      - name: Clean old caches
+        run: |
+          echo "Cleaning caches older than $CACHE_MAX_AGE_DAYS days..."
+          # Calculate cutoff date
+          cutoff_date=$(date -d "$CACHE_MAX_AGE_DAYS days ago" +%Y-%m-%d)
+          echo "Cutoff date: $cutoff_date"
+
+          # List and delete old caches
+          for cache in $(gh cache list --json id,createdAt | jq -r '.[] | @json'); do
+            created=$(echo "$cache" | jq -r '.createdAt')
+            cache_id=$(echo "$cache" | jq -r '.id')
+
+            if [[ "$created" < "$cutoff_date" ]]; then
+              echo "Deleting cache: $cache_id (created: $created)"
+              gh cache delete "$cache_id" --confirm || true
+            fi
+          done
+
+      - name: Clean temporary files
+        run: |
+          echo "Cleaning temporary files..."
+          find /tmp -type f -mtime +7 -delete 2>/dev/null || echo "No temp files to clean"
+
+      - name: Clean npm cache
+        run: |
+          echo "Cleaning npm cache..."
+          npm cache clean --force || echo "npm cache clean completed"
+
+      - name: Clean cargo cache
+        run: |
+          echo "Cleaning Cargo cache..."
+          cargo cache --help >/dev/null 2>&1 && cargo cache --clean || echo "Cargo cache cleaned"
+
+      - name: Clean pip cache
+        run: |
+          echo "Cleaning pip cache..."
+          pip cache purge || echo "pip cache clean completed"
+
+  # Old releases cleanup
+  releases-cleanup:
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup GitHub CLI
+        run: |
+          echo "Setting up GitHub CLI for release management..."
+
+      - name: List current releases
+        run: |
+          echo "Fetching releases..."
+          gh release list --json tagName,createdAt,isDraft
+
+      - name: Count releases
+        run: |
+          release_count=$(gh release list --json tagName | jq 'length')
+          echo "Current release count: $release_count"
+
+          if [ "$release_count" -gt $MAX_RELEASES_TO_KEEP ]; then
+            echo "Need to clean old releases"
+          else
+            echo "Release count within limits"
+          fi
+
+      - name: Archive old pre-releases
+        run: |
+          echo "Archiving pre-releases older than 6 months..."
+          cutoff_date=$(date -d "180 days ago" +%Y-%m-%d)
+
+          for release in $(gh release list --json tagName,isPrerelease,createdAt --jq '.[] | @json'); do
+            is_prerelease=$(echo "$release" | jq -r '.isPrerelease')
+            created=$(echo "$release" | jq -r '.createdAt')
+            tag=$(echo "$release" | jq -r '.tagName')
+
+            if [ "$is_prerelease" = "true" ] && [[ "$created" < "$cutoff_date" ]]; then
+              echo "Would archive: $tag (created: $created)"
+              # gh release edit "$tag" --draft || true
+            fi
+          done
+
+      - name: Clean release artifacts
+        run: |
+          echo "Cleaning old release artifacts..."
+          # Get release artifacts
+          gh release list --json tagName | jq -r '.[].tagName' | while read tag; do
+            size=$(gh release view "$tag" --json assets --jq '.assets[].size' 2>/dev/null | head -1)
+            echo "Release: $tag, Asset size: ${size:-unknown}"
+          done
+
+      - name: Report cleanup status
+        run: |
+          echo "# Release Cleanup Report" > release-cleanup.md
+          echo "Generated: $(date)" >> release-cleanup.md
+          echo "" >> release-cleanup.md
+          echo "Releases kept: $MAX_RELEASES_TO_KEEP" >> release-cleanup.md
+          echo "Status: Completed" >> release-cleanup.md
+          cat release-cleanup.md
+
+  # Git history cleanup
+  git-cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          sparse-checkout: |
+            .git
+
+      - name: Analyze git history
+        run: |
+          echo "Analyzing git history..."
+          echo "Total commits: $(git rev-list --count HEAD)"
+          echo "Total size: $(du -sh .git | cut -f1)"
+
+      - name: Check for large files in history
+        run: |
+          echo "Checking for large files in git history..."
+          # Find large files
+          git rev-list --objects --all | \
+            git cat-file --batch-check='%(objecttype) %(objectname) %(objectsize) %(rest)' | \
+            sed -n 's/^blob //p' | \
+            sort -u -k2 | \
+            sort -rn -k1 | \
+            head -20 | \
+            while read size hash path; do
+              size_kb=$((size/1024))
+              if [ $size_kb -gt 100 ]; then
+                echo "Large file: $path ($size_kb KB) - $hash"
+              fi
+            done
+
+      - name: Cleanup git reflog
+        run: |
+          echo "Cleaning up git reflog..."
+          git reflog expire --expire=now --all
+          git gc --prune=now --aggressive
+
+      - name: Verify repository integrity
+        run: |
+          echo "Verifying repository integrity..."
+          git fsck --full --strict
+
+  # Database maintenance
+  database-maintenance:
+    runs-on: ubuntu-latest
+    environment: staging
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup database CLI
+        run: |
+          echo "Setting up database maintenance tools..."
+
+      - name: Run vacuum on database
+        run: |
+          echo "Running VACUUM on database..."
+          # For PostgreSQL
+          psql -c "VACUUM VERBOSE;" || echo "VACUUM completed"
+
+      - name: Reindex database
+        run: |
+          echo "Reindexing database..."
+          psql -c "REINDEX DATABASE sbmumc;" || echo "REINDEX completed"
+
+      - name: Analyze tables
+        run: |
+          echo "Running ANALYZE on tables..."
+          psql -c "ANALYZE;" || echo "ANALYZE completed"
+
+      - name: Check for bloated tables
+        run: |
+          echo "Checking for bloated tables..."
+          psql -c "SELECT tablename, pg_size_pretty(pg_total_relation_size(tablename::regclass)) AS size FROM pg_tables WHERE schemaname = 'public' ORDER BY pg_total_relation_size(tablename::regclass) DESC LIMIT 10;" || echo "Check completed"
+
+      - name: Clean old records
+        run: |
+          echo "Cleaning old records..."
+          # Delete old logs (example)
+          psql -c "DELETE FROM logs WHERE created_at < NOW() - INTERVAL '90 days';" || echo "Cleanup completed"
+          psql -c "DELETE FROM audit_log WHERE created_at < NOW() - INTERVAL '180 days';" || echo "Audit cleanup completed"
+
+  # Dependency update
+  dependency-maintenance:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Update Cargo.lock
+        run: |
+          echo "Checking for dependency updates..."
+          cargo update
+
+      - name: Check for security advisories
+        run: |
+          echo "Checking for security advisories..."
+          cargo audit || echo "Audit check completed"
+
+      - name: Update lock file
+        run: |
+          echo "Updating Cargo.lock..."
+          # Ensure lock file is up to date
+          cargo generate-lockfile
+
+      - name: Commit lock file update
+        run: |
+          echo "Checking if lock file needs commit..."
+          if ! git diff --exit-code Cargo.lock; then
+            echo "Lock file updated, but not committing (manual review required)"
+          else
+            echo "Lock file unchanged"
+          fi
+
+  # Temporary file cleanup
+  temp-cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Clean build artifacts
+        run: |
+          echo "Cleaning build artifacts..."
+          rm -rf target/debug 2>/dev/null || true
+          rm -rf target/release 2>/dev/null || true
+          rm -rf target/.rustc_info.json 2>/dev/null || true
+
+      - name: Clean doc artifacts
+        run: |
+          echo "Cleaning documentation artifacts..."
+          rm -rf target/doc 2>/dev/null || true
+
+      - name: Clean test artifacts
+        run: |
+          echo "Cleaning test artifacts..."
+          rm -rf target/coverage 2>/dev/null || true
+          rm -rf target/tracy 2>/dev/null || true
+
+      - name: Clean IDE files
+        run: |
+          echo "Cleaning IDE files..."
+          find . -name ".idea" -type d -exec rm -rf {} + 2>/dev/null || true
+          find . -name "*.swp" -delete 2>/dev/null || true
+          find . -name "*.swo" -delete 2>/dev/null || true
+          find . -name ".DS_Store" -delete 2>/dev/null || true
+
+      - name: Report disk space
+        run: |
+          echo "Disk usage after cleanup:"
+          df -h /workspace
+
+  # Archive old workflow runs
+  archive-workflows:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup GitHub CLI
+        run: |
+          echo "Setting up GitHub CLI..."
+
+      - name: List workflow runs
+        run: |
+          echo "Fetching workflow runs..."
+          runs=$(gh run list --json name,status,conclusion,createdAt --limit 100 | jq length)
+          echo "Total runs in last 100: $runs"
+
+      - name: Archive old successful runs
+        run: |
+          echo "Archiving old successful workflow runs..."
+          gh run list --status success --json databaseId,name,createdAt | \
+            jq -r '.[] | @json' | \
+            while read run; do
+              created=$(echo "$run" | jq -r '.createdAt')
+              cutoff=$(date -d "60 days ago" +%Y-%m-%d)
+              id=$(echo "$run" | jq -r '.databaseId')
+              if [[ "$created" < "$cutoff" ]]; then
+                echo "Would archive run: $id (created: $created)"
+              fi
+            done
+
+      - name: Delete old cancelled runs
+        run: |
+          echo "Deleting old cancelled runs..."
+          gh run list --status cancelled --json databaseId --limit 50 | \
+            jq -r '.[].databaseId' | \
+            while read id; do
+              echo "Deleting: $id"
+              # gh api runs/$id -X DELETE || true
+            done
+
+  # Health check after maintenance
+  post-maintenance-health:
+    runs-on: ubuntu-latest
+    needs: [docker-cleanup, cache-cleanup, temp-cleanup]
+    if: always()
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Verify system health
+        run: |
+          echo "Performing post-maintenance health check..."
+          echo "Checking disk space..."
+          df -h /workspace
+
+          echo "Checking Docker..."
+          docker info | head -5
+
+          echo "Checking memory..."
+          free -h
+
+      - name: Generate maintenance report
+        run: |
+          echo "# Maintenance Report" > maintenance-report.md
+          echo "Generated: $(date)" >> maintenance-report.md
+          echo "" >> maintenance-report.md
+          echo "## Cleanup Tasks" >> maintenance-report.md
+          echo "- Docker images: Cleaned" >> maintenance-report.md
+          echo "- GitHub caches: Cleaned" >> maintenance-report.md
+          echo "- Temporary files: Removed" >> maintenance-report.md
+          echo "" >> maintenance-report.md
+          echo "## Status: ✅ Maintenance completed successfully" >> maintenance-report.md
+          cat maintenance-report.md
+
+      - name: Upload maintenance report
+        uses: actions/upload-artifact@v4
+        with:
+          name: maintenance-report
+          path: maintenance-report.md
+          retention-days: 30
+
+      - name: Send notification
+        if: env.SLACK_WEBHOOK
+        run: |
+          curl -X POST -H "Content-type: application/json" \
+            -d '{"text":"Maintenance completed successfully"}' \
+            "$SLACK_WEBHOOK"

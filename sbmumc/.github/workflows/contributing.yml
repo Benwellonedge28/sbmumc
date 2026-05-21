@@ -1,0 +1,417 @@
+name: Contributing and Community
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  issues:
+    types: [opened, closed, labeled]
+  pull_request_review:
+    types: [submitted, edited]
+  repository_dispatch:
+    types: [contributor-welcome]
+
+env:
+  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+jobs:
+  # Welcome new contributors
+  welcome-contributor:
+    runs-on: ubuntu-latest
+    if: github.event.action == 'opened' && github.event.issue
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Get PR/Issue author
+        run: |
+          author=$(gh api repos/{owner}/{repo}/issues/${{ github.event.issue.number }} --jq '.user.login')
+          echo "Author: $author"
+
+      - name: Check if first contribution
+        run: |
+          contributions=$(gh api repos/{owner}/{repo}/contributors --jq 'length')
+          echo "Total contributors: $contributions"
+
+      - name: Post welcome comment
+        run: |
+          gh issue comment ${{ github.event.issue.number }} --body "
+            Welcome to SBMUMC! 🎉
+
+            Thank you for creating this issue. Our team will review it shortly.
+
+            * For questions, check our [docs](https://sbmumc.com/docs)
+            * For bugs, please include reproduction steps
+            * For features, describe the expected behavior
+          "
+
+  # PR template validation
+  pr-template-check:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Check PR description
+        run: |
+          pr_body=$(gh pr view ${{ github.event.pull_request.number }} --json body --jq '.body')
+
+          if [ -z "$pr_body" ] || [ ${#pr_body} -lt 50 ]; then
+            echo "Warning: PR description is too short or empty"
+          else
+            echo "PR description length: ${#pr_body} characters"
+          fi
+
+      - name: Check PR size
+        run: |
+          files_changed=$(gh pr view ${{ github.event.pull_request.number }} --json files --jq '.files | length')
+          additions=$(gh pr view ${{ github.event.pull_request.number }} --json additions --jq '.additions')
+          deletions=$(gh pr view ${{ github.event.pull_request.number }} --json deletions --jq '.deletions')
+
+          echo "Files changed: $files_changed"
+          echo "Additions: $additions"
+          echo "Deletions: $deletions"
+
+          if [ "$files_changed" -gt 20 ]; then
+            echo "Warning: Large PR ($files_changed files)"
+          fi
+
+  # Label management
+  label-management:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: List available labels
+        run: |
+          echo "Available labels:"
+          gh label list --json name,color,description --jq '.[] | "\(.name) (\(.color)) - \(.description // "no description")"'
+
+      - name: Auto-label by type
+        run: |
+          case "${{ github.event_name }}" in
+            pull_request)
+              echo "Adding labels to PR..."
+              ;;
+            issues)
+              echo "Checking issue for label needs..."
+              ;;
+          esac
+
+      - name: Track label usage
+        run: |
+          echo "Label usage report:"
+          gh label list --json name --jq '.[] | .name' | while read label; do
+            count=$(gh issue list --label "$label" --json number --jq 'length')
+            pr_count=$(gh pr list --label "$label" --json number --jq 'length')
+            echo "$label: $count issues, $pr_count PRs"
+          done
+
+  # Contributor stats
+  contributor-stats:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Generate contributor stats
+        run: |
+          echo "# Contributor Statistics" > contributor-stats.md
+          echo "Generated: $(date)" >> contributor-stats.md
+          echo "" >> contributor-stats.md
+
+          echo "## Top Contributors" >> contributor-stats.md
+          gh api repos/{owner}/{repo}/contributors --jq '.[] | "- \(.login): \(.contributions) contributions"' | head -20 >> contributor-stats.md
+
+          echo "" >> contributor-stats.md
+          echo "## Activity" >> contributor-stats.md
+
+          # This month
+          this_month=$(gh api repos/{owner}/{repo}/commits --jq '[.[] | select(.commit.author.date | startswith("'"$(date +%Y-%m)"'"))] | length')
+          echo "- Commits this month: $this_month" >> contributor-stats.md
+
+          # This week
+          this_week=$(gh api repos/{owner}/{repo}/commits --jq '[.[] | select(.commit.author.date | startswith("'"$(date +%Y-W)"'"))] | length')
+          echo "- Commits this week: $this_week" >> contributor-stats.md
+
+          cat contributor-stats.md
+
+      - name: Archive stats
+        uses: actions/upload-artifact@v4
+        with:
+          name: contributor-stats
+          path: contributor-stats.md
+          retention-days: 90
+
+  # Code of conduct enforcement
+  code-of-conduct:
+    runs-on: ubuntu-latest
+    if: github.event.issue && contains(github.event.issue.labels.*.name, 'conduct')
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Flag for review
+        run: |
+          echo "Issue flagged for code of conduct review"
+          # In production, this would notify moderators
+
+  # PR review assignment
+  pr-review-assignment:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Assign reviewers based on codeowners
+        run: |
+          echo "Checking codeowners for review assignment..."
+
+          # Get changed files
+          files=$(gh pr view ${{ github.event.pull_request.number }} --json files --jq '.files[].filename')
+
+          # Simple assignment based on file paths
+          echo "$files" | while read file; do
+            case "$file" in
+              src/core/*)
+                echo "Assigning to core team for: $file"
+                ;;
+              src/ml_inference/*)
+                echo "Assigning to ML team for: $file"
+                ;;
+              src/cli/*)
+                echo "Assigning to CLI team for: $file"
+                ;;
+            esac
+          done
+
+      - name: Add review request comment
+        run: |
+          comment="Thanks for your PR! A review will be assigned shortly.
+
+          *For faster review, ensure:*
+          - Tests are included
+          - Documentation is updated
+          - No breaking changes without discussion"
+
+          # gh pr comment ${{ github.event.pull_request.number }} --body "$comment" || true
+
+  # Maintainer notification
+  maintainer-notify:
+    runs-on: ubuntu-latest
+    if: |
+      github.event_name == 'pull_request' &&
+      (github.event.pull_request.draft || github.event.pull_request.milestone)
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Notify maintainers
+        run: |
+          echo "Notifying maintainers..."
+
+          if [ "${{ github.event.pull_request.draft }}" = "true" ]; then
+            echo "Draft PR detected - notify for visibility"
+          fi
+
+          if [ -n "${{ github.event.pull_request.milestone }}" ]; then
+            echo "PR targets milestone - track for release"
+          fi
+
+  # Community metrics
+  community-metrics:
+    runs-on: ubuntu-latest
+    schedule:
+      - cron: '0 0 * * *'  # Daily
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Collect metrics
+        run: |
+          echo "# Community Metrics" > metrics.md
+          echo "Date: $(date)" >> metrics.md
+          echo "" >> metrics.md
+
+          echo "## Issues" >> metrics.md
+          open=$(gh issue list --state open --json number --jq 'length')
+          closed=$(gh issue list --state closed --json number --jq 'length')
+          echo "- Open: $open" >> metrics.md
+          echo "- Closed: $closed" >> metrics.md
+
+          echo "## Pull Requests" >> metrics.md
+          pr_open=$(gh pr list --state open --json number --jq 'length')
+          pr_merged=$(gh pr list --state closed --json number --jq 'length')
+          echo "- Open: $pr_open" >> metrics.md
+          echo "- Merged: $pr_merged" >> metrics.md
+
+          echo "## Activity" >> metrics.md
+          new_contributors=$(gh api repos/{owner}/{repo}/contributors --jq 'length')
+          echo "- Total contributors: $new_contributors" >> metrics.md
+
+          cat metrics.md
+
+      - name: Archive metrics
+        uses: actions/upload-artifact@v4
+        with:
+          name: community-metrics
+          path: metrics.md
+          retention-days: 365
+
+  # First-time contributor support
+  first-time-contributor:
+    runs-on: ubuntu-latest
+    if: |
+      github.event_name == 'pull_request' ||
+      (github.event.issue && github.event.action == 'opened')
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Check contributor history
+        run: |
+          actor="${{ github.event.pull_request.user.login || github.event.issue.user.login }}"
+          contributions=$(gh api repos/{owner}/{repo}/commits --author "$actor" --jq 'length')
+
+          if [ "$contributions" -le 1 ]; then
+            echo "First-time contributor detected: $actor"
+            echo "Providing additional guidance..."
+          fi
+
+      - name: Post guidance
+        if: github.event.issue
+        run: |
+          gh issue comment ${{ github.event.issue.number }} --body "
+            👋 **First time contributor? Welcome!**
+
+            Here are some resources to help you get started:
+            - [Contributing Guide](CONTRIBUTING.md)
+            - [Code of Conduct](CODE_OF_CONDUCT.md)
+            - [Good First Issues](https://github.com/Benwellonedge28/sbmumc/issues?q=label%3A%22good+first+issue%22)
+
+            Don't hesitate to ask if you have any questions!
+          "
+
+  # Issue triage
+  issue-triage:
+    runs-on: ubuntu-latest
+    if: github.event.issue && github.event.action == 'opened'
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Analyze issue
+        run: |
+          echo "Analyzing new issue..."
+          body="${{ github.event.issue.body }}"
+
+          # Check for required information
+          has_reproduction=false
+          has_expected=false
+          has_actual=false
+
+          if echo "$body" | grep -qi "reproduce\|steps\|scenario"; then
+            has_reproduction=true
+          fi
+
+          if echo "$body" | grep -qi "expected\|should"; then
+            has_expected=true
+          fi
+
+          if echo "$body" | grep -qi "actual\|got\|but"; then
+            has_actual=true
+          fi
+
+          echo "Has reproduction steps: $has_reproduction"
+          echo "Has expected behavior: $has_expected"
+          echo "Has actual behavior: $has_actual"
+
+      - name: Add triage labels
+        run: |
+          echo "Adding triage labels..."
+          # Auto-label based on keywords
+          body="${{ github.event.issue.body }}"
+
+          if echo "$body" | grep -qi "bug\|error\|crash\|fail"; then
+            echo "Adding 'bug' label"
+            # gh issue edit ${{ github.event.issue.number }} --add-label bug || true
+          fi
+
+          if echo "$body" | grep -qi "feature\|enhancement\|would be nice"; then
+            echo "Adding 'enhancement' label"
+            # gh issue edit ${{ github.event.issue.number }} --add-label enhancement || true
+          fi
+
+      - name: Acknowledge issue
+        run: |
+          gh issue comment ${{ github.event.issue.number }} --body "
+            Thanks for opening this issue!
+
+            Our team will triage this shortly. In the meantime:
+            - Please check if similar issues exist
+            - Provide as much detail as possible
+            - Include reproduction steps if applicable
+
+            Reference: #${{ github.event.issue.number }}
+          "
+
+  # Stale issue management
+  stale-management:
+    runs-on: ubuntu-latest
+    schedule:
+      - cron: '0 0 * * *'  # Daily
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Find stale issues
+        run: |
+          echo "Finding stale issues..."
+
+          # Issues with no activity for 30 days
+          stale_issues=$(gh issue list --state open --json number,updatedAt --jq '
+            [.[] | select(.updatedAt < (now | . - 2592000))] | .[].number')
+
+          echo "Stale issues:"
+          echo "$stale_issues" || echo "None found"
+
+      - name: Add stale label
+        run: |
+          echo "Adding 'stale' label to old issues..."
+
+      - name: Close very old issues
+        run: |
+          echo "Checking for issues to close..."
+          # Close issues with no activity for 90 days
+          very_old=$(gh issue list --state open --json number,updatedAt --jq '
+            [.[] | select(.updatedAt < (now | . - 7776000))] | .[].number')
+
+          echo "Very old issues to potentially close:"
+          echo "$very_old" || echo "None found"
+
+  # PR merged notification
+  pr-merged-notify:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request' && github.event.action == 'closed' && github.event.pull_request.merged
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Post merge comment
+        run: |
+          pr_num=${{ github.event.pull_request.number }}
+          author=${{ github.event.pull_request.user.login }}
+
+          echo "PR #$pr_num merged by $author"
+
+          # Post thank you comment
+          # gh pr comment $pr_num --body "🎉 Thank you @$author for your contribution! Merged!" || true
+
+      - name: Update contributor stats
+        run: |
+          echo "Updating contributor statistics..."

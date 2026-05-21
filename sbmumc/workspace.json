@@ -1,0 +1,250 @@
+{
+  "name": "sbmumc",
+  "display_name": "SBMUMC - Universal Meta-Compiler",
+  "version": "0.1.0",
+  "description": "Samuel Benwellonedge Mukandara Universal Meta-Compiler - A sovereign AGI system for universal code transformation and generation",
+  "author": "Samuel Benwellonedge Mukandara",
+  "license": "MIT OR Apache-2.0",
+  "homepage": "https://github.com/Benwellonedge28/sbmumc",
+  "repository": "https://github.com/Benwellonedge28/sbmumc",
+  "keywords": [
+    "compiler",
+    "meta-compiler",
+    "agi",
+    "universal",
+    "code-generation",
+    "transformation",
+    "multi-modal",
+    "hdl",
+    "programming-languages",
+    "sovereign-ai"
+  ],
+  "categories": [
+    "Compiler",
+    "Code Generation",
+    "AGI",
+    "Artificial Intelligence"
+  ],
+  "languages": [
+    "rust",
+    "c",
+    "cpp",
+    "python",
+    "javascript",
+    "typescript",
+    "go",
+    "java",
+    "hdl",
+    "hardware-description"
+  ],
+  "targets": [
+    {
+      "name": "x86-64",
+      "description": "x86-64 assembly and binary",
+      "enabled": true
+    },
+    {
+      "name": "ARM64",
+      "description": "ARM64 assembly and binary",
+      "enabled": true
+    },
+    {
+      "name": "RISC-V",
+      "description": "RISC-V assembly and binary",
+      "enabled": true
+    },
+    {
+      "name": "WebAssembly",
+      "description": "WebAssembly binary format",
+      "enabled": true
+    },
+    {
+      "name": "LLVM",
+      "description": "LLVM IR and bitcode",
+      "enabled": true
+    }
+  ],
+  "modules": {
+    "core": {
+      "path": "src/core",
+      "description": "Core compilation and transformation engine",
+      "enabled": true
+    },
+    "code_generation": {
+      "path": "src/code_generation",
+      "description": "Multi-target code generation",
+      "enabled": true
+    },
+    "optimization": {
+      "path": "src/optimization",
+      "description": "Advanced optimization passes",
+      "enabled": true
+    },
+    "analysis": {
+      "path": "src/analysis",
+      "description": "Static and dynamic analysis",
+      "enabled": true
+    },
+    "verification": {
+      "path": "src/verification",
+      "description": "Formal verification and validation",
+      "enabled": true
+    },
+    "ml_inference": {
+      "path": "src/ml_inference",
+      "description": "ML model inference for code understanding",
+      "enabled": true
+    },
+    "api_server": {
+      "path": "src/api_server",
+      "description": "REST API server",
+      "enabled": true
+    },
+    "cli": {
+      "path": "src/cli",
+      "description": "Command-line interface",
+      "enabled": true
+    }
+  },
+  "build": {
+    "rust_version": "1.75.0",
+    "features": {
+      "default": [
+        "full",
+        "safe",
+        "optimized"
+      ],
+      "all": [
+        "full",
+        "safe",
+        "optimized",
+        "experimental",
+        "ml"
+      ]
+    },
+    "profiles": {
+      "dev": {
+        "optimization_level": "0",
+        "debug": true,
+        "lto": false
+      },
+      "release": {
+        "optimization_level": "3",
+        "debug": false,
+        "lto": "thin"
+      },
+      "production": {
+        "optimization_level": "3",
+        "debug": false,
+        "lto": "fat",
+        "codegen_units": 1
+      }
+    }
+  },
+  "testing": {
+    "coverage": {
+      "enabled": true,
+      "threshold": 80
+    },
+    "fuzzing": {
+      "enabled": true,
+      "corpus_size": 1000
+    },
+    "property_testing": {
+      "enabled": true,
+      "iterations": 10000
+    }
+  },
+  "deployment": {
+    "environments": {
+      "development": {
+        "url": "https://dev.sbmumc.com",
+        "region": "us-east-1",
+        "auto_deploy": true
+      },
+      "staging": {
+        "url": "https://staging.sbmumc.com",
+        "region": "us-east-1",
+        "auto_deploy": true
+      },
+      "production": {
+        "url": "https://api.sbmumc.com",
+        "region": "us-west-2",
+        "auto_deploy": false
+      }
+    },
+    "cloud_providers": {
+      "aws": {
+        "enabled": true,
+        "services": ["ecs", "lambda", "s3", "eks"]
+      },
+      "gcp": {
+        "enabled": true,
+        "services": ["gke", "cloud-run", "cloud-functions"]
+      },
+      "azure": {
+        "enabled": true,
+        "services": ["appservice", "aks", "container-apps"]
+      }
+    }
+  },
+  "monitoring": {
+    "metrics": {
+      "enabled": true,
+      "prometheus": true,
+      "grafana": true
+    },
+    "logging": {
+      "enabled": true,
+      "level": "info",
+      "format": "json"
+    },
+    "alerting": {
+      "enabled": true,
+      "channels": ["slack", "pagerduty", "email"]
+    }
+  },
+  "security": {
+    "audit": {
+      "enabled": true,
+      "schedule": "daily"
+    },
+    "sbom": {
+      "enabled": true
+    },
+    "secret_scanning": {
+      "enabled": true
+    }
+  },
+  "documentation": {
+    "api_docs": {
+      "enabled": true,
+      "output": "target/doc"
+    },
+    "mdbook": {
+      "enabled": true,
+      "output": "book/html"
+    },
+    "coverage_report": {
+      "enabled": true,
+      "output": "target/coverage"
+    }
+  },
+  "ci": {
+    "github_actions": {
+      "enabled": true,
+      "workflows": [
+        "quality.yml",
+        "security.yml",
+        "documentation.yml",
+        "release.yml",
+        "deploy.yml",
+        "aws.yml",
+        "gcp.yml",
+        "azure.yml",
+        "monitoring.yml",
+        "maintenance.yml"
+      ]
+    }
+  }
+}

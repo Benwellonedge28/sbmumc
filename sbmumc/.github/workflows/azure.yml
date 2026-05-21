@@ -1,0 +1,279 @@
+name: Azure Deployment
+
+on:
+  push:
+    branches: [main, develop]
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Deployment environment'
+        required: true
+        type: choice
+        options:
+          - development
+          - staging
+          - production
+        default: staging
+
+env:
+  AZURE_WEBAPP: ${{ vars.AZURE_WEBAPP || 'sbmumc-webapp' }}
+  AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP || 'sbmumc-rg' }}
+  AZURE_CONTAINER_REGISTRY: ${{ vars.AZURE_CONTAINER_REGISTRY || 'sbmumccr' }}
+
+jobs:
+  # Build and push to Azure Container Registry
+  build-and-push-acr:
+    runs-on: ubuntu-latest
+    needs: []
+    environment: ${{ github.event.inputs.environment || 'staging' }}
+    outputs:
+      image_tag: ${{ steps.meta.outputs.tags }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Azure login
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Azure Container Registry login
+        run: az acr login --name ${{ env.AZURE_CONTAINER_REGISTRY }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.AZURE_CONTAINER_REGISTRY }}.azurecr.io/sbmumc
+          tags: |
+            type=ref,event=branch
+            type=semver,pattern={{version}}
+            type=sha
+
+      - name: Build and push to ACR
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # Deploy to Azure Web App (App Service)
+  deploy-webapp:
+    runs-on: ubuntu-latest
+    needs: [build-and-push-acr]
+    environment: ${{ github.event.inputs.environment || 'staging' }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Azure login
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Deploy to Azure Web App
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ env.AZURE_WEBAPP }}
+          slot-name: ${{ github.event.inputs.environment || 'staging' }}
+          images: ${{ needs.build-and-push-acr.outputs.image_tag }}
+
+      - name: Verify deployment
+        run: |
+          az webapp show --name ${{ env.AZURE_WEBAPP }} \
+            --resource-group ${{ env.AZURE_RESOURCE_GROUP }}
+
+  # Deploy to Azure Container Apps
+  deploy-container-apps:
+    runs-on: ubuntu-latest
+    needs: [build-and-push-acr]
+    if: false  # Enable if using Container Apps
+    environment: ${{ github.event.inputs.environment || 'staging' }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Azure login
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Setup Azure CLI
+        run: az extension add --name container-apps
+
+      - name: Deploy to Container Apps
+        run: |
+          az containerapp update \
+            --name sbmumc-app \
+            --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+            --image ${{ needs.build-and-push-acr.outputs.image_tag }}
+
+  # Deploy to Azure Kubernetes Service
+  deploy-aks:
+    runs-on: ubuntu-latest
+    needs: [build-and-push-acr]
+    if: false  # Enable if using AKS
+    environment: ${{ github.event.inputs.environment || 'staging' }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Azure login
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Setup kubectl
+        uses: azure/setup-kubectl@v4
+
+      - name: Get AKS credentials
+        run: |
+          az aks get-credentials \
+            --name sbmumc-aks \
+            --resource-group ${{ env.AZURE_RESOURCE_GROUP }}
+
+      - name: Deploy to AKS
+        run: |
+          kubectl set image deployment/sbmumc \
+            sbmumc=${{ needs.build-and-push-acr.outputs.image_tag }}
+
+          kubectl rollout status deployment/sbmumc --timeout=300s
+
+      - name: Verify deployment
+        run: |
+          kubectl get pods -l app=sbmumc
+          kubectl get services sbmumc
+
+  # Azure Functions deployment
+  deploy-functions:
+    runs-on: ubuntu-latest
+    if: false  # Enable if using Azure Functions
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Azure login
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Build Azure Functions
+        run: |
+          cargo build --release --target x86_64-unknown-linux-gnu
+          # Add Azure Functions packaging logic
+
+      - name: Deploy to Azure Functions
+        run: |
+          az functionapp deployment \
+            --name sbmumc-func \
+            --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+            --package target/release/sbmumc.zip
+
+  # Terraform on Azure
+  terraform-azure:
+    runs-on: ubuntu-latest
+    if: false  # Enable if using Terraform on Azure
+    environment: ${{ github.event.inputs.environment || 'staging' }}
+    permissions:
+      contents: read
+      actions: write
+      pull-requests: write
+      id-token: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Azure login
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.6.0
+
+      - name: Terraform Init
+        working-directory: ./infrastructure/azure
+        env:
+          ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+        run: terraform init
+
+      - name: Terraform Format
+        working-directory: ./infrastructure/azure
+        run: terraform fmt -check
+
+      - name: Terraform Validate
+        working-directory: ./infrastructure/azure
+        run: terraform validate
+
+      - name: Terraform Plan
+        working-directory: ./infrastructure/azure
+        env:
+          ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+        run: terraform plan -out=tfplan
+
+      - name: Terraform Apply
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        working-directory: ./infrastructure/azure
+        env:
+          ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+        run: terraform apply -auto-approve tfplan
+
+  # Azure SQL database migrations
+  database-migrations:
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment || 'staging' }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Azure login
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Run database migrations
+        run: |
+          echo "Running Azure SQL migrations..."
+          # Add migration logic here
+
+  # Post-deployment verification
+  post-deployment:
+    runs-on: ubuntu-latest
+    needs: [deploy-webapp]
+    if: always()
+    steps:
+      - name: Azure login
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Verify webapp status
+        run: |
+          az webapp show --name ${{ env.AZURE_WEBAPP }} \
+            --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+            --query "{state: state, url: defaultHostName}"
+
+      - name: Send notification
+        run: |
+          echo "Azure deployment to ${{ github.event.inputs.environment || 'staging' }} completed"

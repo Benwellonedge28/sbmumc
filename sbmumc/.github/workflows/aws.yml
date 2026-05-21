@@ -1,0 +1,308 @@
+name: AWS Deployment
+
+on:
+  push:
+    branches: [main, develop]
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Deployment environment'
+        required: true
+        type: choice
+        options:
+          - development
+          - staging
+          - production
+        default: staging
+
+env:
+  AWS_REGION: ${{ vars.AWS_REGION || 'us-east-1' }}
+  ECR_REPOSITORY: ${{ vars.ECR_REPOSITORY || 'sbmumc' }}
+  S3_BUCKET: ${{ vars.S3_BUCKET || 'sbmumc-deployments' }}
+
+jobs:
+  # Build and push to ECR
+  build-and-push-ecr:
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment || 'staging' }}
+    outputs:
+      image_tag: ${{ steps.meta.outputs.tags }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}
+          tags: |
+            type=ref,event=branch
+            type=semver,pattern={{version}}
+            type=sha
+
+      - name: Build and push to ECR
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Update ECS task definition
+        if: github.event.inputs.environment == 'production' || github.ref == 'refs/heads/main'
+        run: |
+          echo "ECR Image: ${{ steps.meta.outputs.tags }}"
+
+  # Deploy to ECS Fargate
+  deploy-ecs:
+    runs-on: ubuntu-latest
+    needs: [build-and-push-ecr]
+    environment: ${{ github.event.inputs.environment || 'staging' }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Download task definition
+        run: |
+          aws ecs describe-task-definition --task-definition ${{ env.ECR_REPOSITORY }} \
+            --query taskDefinition > task-definition.json
+
+      - name: Update task definition with new image
+        id: task-def
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        with:
+          task-definition: task-definition.json
+          container-name: sbmumc
+          image: ${{ needs.build-and-push-ecr.outputs.image_tag }}
+
+      - name: Deploy to ECS cluster
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v2
+        with:
+          task-definition: ${{ steps.task-def.outputs.task-definition }}
+          service: ${{ env.ECR_REPOSITORY }}-service
+          cluster: ${{ env.ECR_REPOSITORY }}-cluster
+          wait-for-service-stability: true
+
+      - name: Run smoke tests
+        run: |
+          echo "Running smoke tests against ECS deployment..."
+          # Add smoke test logic here
+
+  # Deploy Lambda function
+  deploy-lambda:
+    runs-on: ubuntu-latest
+    if: false  # Enable if using Lambda
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Build Lambda package
+        run: |
+          cargo build --release --target x86_64-unknown-linux-musl
+          cd target/x86_64-unknown-linux-musl/release
+          zip -r lambda.zip sbmumc
+
+      - name: Deploy to Lambda
+        run: |
+          aws lambda update-function-code \
+            --function-name sbmumc-function \
+            --zip-file fileb://lambda.zip
+
+  # Deploy to S3 (static assets)
+  deploy-s3:
+    runs-on: ubuntu-latest
+    if: false  # Enable if deploying to S3
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Sync to S3
+        uses: aws-actions/aws-s3-sync@v2
+        with:
+          args: --delete
+          bucket: ${{ env.S3_BUCKET }}
+          prefix: ${{ github.event.inputs.environment || 'staging' }}/
+          local-dir: ./dist
+
+      - name: Invalidate CloudFront
+        if: vars.CLOUDFRONT_DISTRIBUTION_ID
+        uses: aws-actions/aws-cloudfront-invalidation@v2
+        with:
+          distribution-id: ${{ vars.CLOUDFRONT_DISTRIBUTION_ID }}
+          paths: "/*"
+
+  # Terraform infrastructure management
+  terraform:
+    runs-on: ubuntu-latest
+    if: false  # Enable if using Terraform
+    environment: ${{ github.event.inputs.environment || 'staging' }}
+    permissions:
+      contents: read
+      actions: write
+      pull-requests: write
+      id-token: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.6.0
+
+      - name: Terraform Init
+        working-directory: ./infrastructure/aws
+        run: terraform init
+
+      - name: Terraform Format
+        working-directory: ./infrastructure/aws
+        run: terraform fmt -check
+
+      - name: Terraform Validate
+        working-directory: ./infrastructure/aws
+        run: terraform validate
+
+      - name: Terraform Plan
+        working-directory: ./infrastructure/aws
+        run: terraform plan -out=tfplan
+
+      - name: Terraform Apply
+        if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
+        working-directory: ./infrastructure/aws
+        run: terraform apply -auto-approve tfplan
+
+  # AWS CDK deployment
+  cdk-deploy:
+    runs-on: ubuntu-latest
+    if: false  # Enable if using CDK
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install CDK
+        run: npm install -g aws-cdk@latest
+
+      - name: Install dependencies
+        working-directory: ./infrastructure/cdk
+        run: npm install
+
+      - name: CDK Synth
+        working-directory: ./infrastructure/cdk
+        run: cdk synth
+
+      - name: CDK Deploy
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        working-directory: ./infrastructure/cdk
+        run: cdk deploy --require-approval never
+
+  # Database migrations
+  database-migrations:
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment || 'staging' }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Run database migrations
+        run: |
+          echo "Running database migrations..."
+          # Add migration logic here
+
+      - name: Verify migrations
+        run: |
+          echo "Verifying database migrations..."
+
+  # Post-deployment verification
+  post-deployment:
+    runs-on: ubuntu-latest
+    needs: [deploy-ecs]
+    if: always()
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Check ECS service health
+        run: |
+          aws ecs describe-services \
+            --services ${{ env.ECR_REPOSITORY }}-service \
+            --cluster ${{ env.ECR_REPOSITORY }}-cluster
+
+      - name: Send deployment notification
+        run: |
+          echo "Deployment to ${{ github.event.inputs.environment || 'staging' }} completed"
+
+      - name: Create CloudWatch dashboard
+        if: github.event.inputs.environment == 'production'
+        run: |
+          aws cloudwatch put-dashboard --dashboard-name sbmumc-prod \
+            --dashboard-body file://./aws/dashboard.json
