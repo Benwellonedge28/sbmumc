@@ -1,0 +1,27 @@
+# SBMUMC Project .gitignore
+
+# Docker files - keep these in version control!
+!Dockerfile
+!Dockerfile.*
+!docker-compose*.yml
+
+# Build output - ignore only in target
+/target/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Local config
+.env
+.env.local
+config/local/

@@ -1,0 +1,72 @@
+# ============================================================
+# SBMUMC Distroless Dockerfile
+# Minimal attack surface, no shell, fully static
+# Optimized for: AWS, GCP, Azure, Kubernetes
+# ============================================================
+
+FROM --platform=linux/amd64 rust:1.75-bookworm AS builder
+
+# Install dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    clang \
+    llvm \
+    libclang-dev \
+    pkg-config \
+    libssl-dev \
+    protobuf-compiler \
+    && rm -rf /var/lib/apt/lists/*
+
+# Add Rust targets
+RUN rustup target add x86_64-unknown-linux-musl aarch64-unknown-linux-musl
+
+WORKDIR /build
+
+# Copy source
+COPY . .
+
+# Build static binary
+ENV RUSTFLAGS="-C target-feature=+crt-static"
+ENV CARGO_TARGET_X86_64_UNKNOWN_LINUX_MUSL_LINKER=x86_64-linux-musl-gcc
+ENV CARGO_TARGET_AARCH64_UNKNOWN_LINUX_MUSL_LINKER=aarch64-linux-musl-gcc
+
+RUN cargo build --release --locked \
+    --target x86_64-unknown-linux-musl \
+    --features full,safe,optimized
+
+# -----------------------------
+# Final Stage - x86_64
+# -----------------------------
+FROM gcr.io/distroless/cc:nonroot AS runtime-amd64
+
+COPY --from=builder /build/target/x86_64-unknown-linux-musl/release/sbmumc /app/sbmumc
+
+USER 65532:65532
+
+ENV SBMUMC_HOME=/app \
+    SBMUMC_DATA=/app/data \
+    RUST_LOG=info
+
+EXPOSE 8080 8081 8082 8083
+
+ENTRYPOINT ["/app/sbmumc"]
+
+# -----------------------------
+# Final Stage - ARM64
+# -----------------------------
+FROM --platform=linux/arm64 gcr.io/distroless/cc:nonroot AS runtime-arm64
+
+COPY --from=builder /build/target/aarch64-unknown-linux-musl/release/sbmumc /app/sbmumc
+
+USER 65532:65532
+
+ENV SBMUMC_HOME=/app \
+    SBMUMC_DATA=/app/data \
+    RUST_LOG=info
+
+EXPOSE 8080 8081 8082 8083
+
+ENTRYPOINT ["/app/sbmumc"]
+
+# Default target
+FROM runtime-amd64

@@ -1,0 +1,225 @@
+# ============================================================
+# Azure Container Apps Deployment Configuration
+# ============================================================
+
+# Resource Group
+resourceGroup:
+  name: sbmumc-rg
+  location: eastus
+  tags:
+    environment: production
+    application: sbmumc
+
+# Container Apps Environment
+containerAppsEnvironment:
+  name: sbmumc-env
+  location: eastus
+  resourceGroup: sbmumc-rg
+  logs:
+    destination: log-analytics
+    logAnalytics:
+      workspaceId: ""
+      sharedKey: ""
+
+# Container App - Main Service
+containerApp:
+  name: sbmumc
+  location: eastus
+  resourceGroup: sbmumc-rg
+  managedEnvironmentId: "/subscriptions/{sub}/resourceGroups/sbmumc-rg/providers/Microsoft.App/managedEnvironments/sbmumc-env"
+
+  properties:
+    managedBy: "Microsoft.App/containerApps"
+
+    configuration:
+      activeRevisionsMode: Multiple
+      ingress:
+        external: true
+        targetPort: 8080
+        transport: auto
+        allowInsecure: false
+
+      secrets:
+        - name: sbmumc-secret
+          value: ""
+        - name: database-connection
+          value: ""
+
+      registries:
+        - server: ghcr.io
+          username: ""
+          passwordSecretRef: ""
+
+    template:
+      revisionSuffix: v1
+      containers:
+        - name: sbmumc
+          image: ghcr.io/benwellonedge28/sbmumc:0.1.0
+          resources:
+            cpu: 2.0
+            memory: 4Gi
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+            - name: api
+              containerPort: 8081
+              protocol: TCP
+            - name: metrics
+              containerPort: 8082
+              protocol: TCP
+          env:
+            - name: RUST_LOG
+              value: info
+            - name: SBMUMC_MODE
+              value: production
+            - name: DATABASE_URL
+              secretRef: database-connection
+          probes:
+            - type: Liveness
+              httpGet:
+                path: /health
+                port: 8080
+              initialDelaySeconds: 10
+              periodSeconds: 30
+            - type: Readiness
+              httpGet:
+                path: /ready
+                port: 8080
+              initialDelaySeconds: 5
+              periodSeconds: 10
+            - type: Startup
+              httpGet:
+                path: /health
+                port: 8080
+              initialDelaySeconds: 5
+              periodSeconds: 10
+              failureThreshold: 30
+
+      scale:
+        minReplicas: 2
+        maxReplicas: 10
+        rules:
+          - name: http-scaling
+            http:
+              metadata:
+                concurrentRequests: "50"
+
+      volumes:
+        - name: sbmumc-data
+          storageType: EmptyDir
+
+---
+# Azure SQL Database
+resource:
+  type: Microsoft.Sql/servers/databases
+  name: sbmumc-db
+  location: eastus
+  sku:
+    name: Basic
+    tier: Basic
+    capacity: 5
+  properties:
+    collation: SQL_Latin1_General_CP1_CI_AS
+    maxSizeBytes: 2147483648
+    zoneRedundant: false
+  dependsOn:
+    - sbmumc-sql-server
+
+---
+# Azure Cache for Redis
+resource:
+  type: Microsoft.Cache/Redis
+  name: sbmumc-redis
+  location: eastus
+  sku:
+    name: Basic
+    family: C
+    capacity: 1
+  properties:
+    enableNonSslPort: false
+    minimumTlsVersion: 1.2
+
+---
+# Azure Container Registry
+resource:
+  type: Microsoft.ContainerRegistry/registries
+  name: sbmumccr
+  location: eastus
+  sku:
+    name: Basic
+  properties:
+    adminUserEnabled: false
+    publicNetworkAccess: Enabled
+
+---
+# Azure Monitor
+resource:
+  type: Microsoft.Insights/components
+  name: sbmumc-appinsights
+  location: eastus
+  kind: web
+  properties:
+    Application_Type: web
+    Flow_Type: Bluefield
+    Request_Source: IbAizaPzSjYMzQ7rqj0Ag
+
+---
+# Azure Application Insights Webhook
+resource:
+  type: Microsoft.Insights/scheduledQueryRules
+  name: sbmumc-alert
+  location: eastus
+  properties:
+    displayName: SBMUMC Alert Rule
+    description: Alert when error rate exceeds threshold
+    enabled: true
+    evaluationCondition:
+      left: customMetrics/errorCount
+      operator: GreaterThan
+      right: 10
+    evaluationInterval: 1m
+    scopes:
+      - /subscriptions/{sub}/resourceGroups/sbmumc-rg/providers/Microsoft.ContainerApps/sbmumc
+    actions:
+      - actionGroupId: /subscriptions/{sub}/resourceGroups/sbmumc-rg/providers/microsoft.insights/actionGroups/sbmumc-ag
+
+---
+# Azure Front Door
+resource:
+  type: Microsoft.Network/frontdoors
+  name: sbmumc-frontdoor
+  location: global
+  properties:
+    healthProbeSettings:
+      - name: healthprobe
+        intervalInSeconds: 30
+        path: /health
+        protocol: HTTP
+        enabled: true
+    loadBalancingSettings:
+      - name: loadbalancer
+        sampleSize: 4
+        successfulSamplesRequired: 2
+    backendPools:
+      - name: sbmumc-backend
+        backends:
+          - address: sbmumc.eastus.azurecontainerapps.io
+            enabled: true
+            weight: 1000
+        loadBalancingName: loadbalancer
+        healthProbeName: healthprobe
+    routingRules:
+      - name: default-routing
+        acceptedProtocols:
+          - HTTPS
+        patternsToMatch:
+          - /*
+        routeConfiguration:
+          forwardProtocol: HTTPS
+          backendPoolName: sbmumc-backend
+          odataType: Microsoft.Azure.FrontDoor.Models.FrontdoorForwardingConfiguration
+    frontendEndpoints:
+      - name: sbmumc-frontend
+        hostName: sbmumc.azurefd.net
+        sessionAffinityEnabled: false

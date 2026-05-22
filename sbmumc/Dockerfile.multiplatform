@@ -1,0 +1,237 @@
+# ============================================================
+# Multi-Platform Build Dockerfile
+# Builds for AMD64, ARM64, RISC-V, WASM
+# ============================================================
+
+# syntax=docker/dockerfile:1.7
+
+# -----------------------------
+# Base Build Stage
+# -----------------------------
+FROM --platform=$BUILDPLATFORM rust:1.75-bookworm AS base
+
+ARG TARGETARCH
+ARG TARGETOS
+
+RUN echo "Building for ${TARGETOS}/${TARGETARCH}" && \
+    apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    clang \
+    llvm \
+    libclang-dev \
+    pkg-config \
+    libssl-dev \
+    protobuf-compiler \
+    git \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install cross-compilation toolchains
+RUN case "${TARGETARCH}" in \
+    amd64) \
+        echo "Native amd64 build" \
+        ;; \
+    arm64) \
+        apt-get update && apt-get install -y gcc-aarch64-linux-gnu libc6-dev-arm64-cross && rm -rf /var/lib/apt/lists/* \
+        ;; \
+    arm) \
+        apt-get update && apt-get install -y gcc-arm-linux-gnueabihf libc6-dev-armhf-cross && rm -rf /var/lib/apt/lists/* \
+        ;; \
+    riscv64) \
+        apt-get update && apt-get install -y gcc-riscv64-linux-gnu libc6-dev-riscv64-cross && rm -rf /var/lib/apt/lists/* \
+        ;; \
+    esac
+
+# Install Rust targets
+RUN rustup target add \
+    x86_64-unknown-linux-gnu \
+    aarch64-unknown-linux-gnu \
+    armv7-unknown-linux-gnueabihf \
+    riscv64gc-unknown-linux-gnu \
+    wasm32-wasi \
+    wasm32-unknown-emscripten \
+    x86_64-unknown-linux-musl \
+    aarch64-unknown-linux-musl
+
+# -----------------------------
+# Dependencies Stage
+# -----------------------------
+FROM base AS deps
+
+WORKDIR /build
+
+# Copy manifests
+COPY Cargo.toml Cargo.lock* ./
+
+# Pre-download dependencies
+RUN mkdir -p src && \
+    echo "fn main() {}" > src/main.rs && \
+    cargo fetch --locked || cargo fetch || true && \
+    rm -rf src
+
+# -----------------------------
+# Build Stage - x86_64
+# -----------------------------
+FROM base AS build-amd64
+
+WORKDIR /build
+
+COPY --from=deps /build/target /build/target
+COPY src/ ./src/
+COPY Cargo.toml Cargo.lock* ./
+
+ENV CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_LINKER=x86_64-linux-gnu-gcc
+ENV CC_x86_64_unknown_linux_gnu=x86_64-linux-gnu-gcc
+ENV CXX_x86_64_unknown_linux_gnu=x86_64-linux-gnu-g++
+
+RUN cargo build --release --locked \
+    --target x86_64-unknown-linux-gnu \
+    --features full,safe,optimized
+
+# -----------------------------
+# Build Stage - ARM64
+# -----------------------------
+FROM base AS build-arm64
+
+WORKDIR /build
+
+COPY --from=deps /build/target /build/target
+COPY src/ ./src/
+COPY Cargo.toml Cargo.lock* ./
+
+ENV CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc
+ENV CC_aarch64_unknown_linux_gnu=aarch64-linux-gnu-gcc
+ENV CXX_aarch64_unknown_linux_gnu=aarch64-linux-gnu-g++
+
+RUN cargo build --release --locked \
+    --target aarch64-unknown-linux-gnu \
+    --features full,safe,optimized
+
+# -----------------------------
+# Build Stage - ARMv7
+# -----------------------------
+FROM base AS build-arm
+
+WORKDIR /build
+
+COPY --from=deps /build/target /build/target
+COPY src/ ./src/
+COPY Cargo.toml Cargo.lock* ./
+
+ENV CARGO_TARGET_ARMV7_UNKNOWN_LINUX_GNUEABIHF_LINKER=arm-linux-gnueabihf-gcc
+ENV CC_armv7_unknown_linux_gnueabihf=arm-linux-gnueabihf-gcc
+ENV CXX_armv7_unknown_linux_gnueabihf=arm-linux-gnueabihf-g++
+
+RUN cargo build --release --locked \
+    --target armv7-unknown-linux-gnueabihf \
+    --features full,safe,optimized
+
+# -----------------------------
+# Build Stage - RISC-V
+# -----------------------------
+FROM base AS build-riscv64
+
+WORKDIR /build
+
+COPY --from=deps /build/target /build/target
+COPY src/ ./src/
+COPY Cargo.toml Cargo.lock* ./
+
+ENV CARGO_TARGET_RISCV64GC_UNKNOWN_LINUX_GNU_LINKER=riscv64-linux-gnu-gcc
+ENV CC_riscv64gc_unknown_linux_gnu=riscv64-linux-gnu-gcc
+ENV CXX_riscv64gc_unknown_linux_gnu=riscv64-linux-gnu-g++
+
+RUN cargo build --release --locked \
+    --target riscv64gc-unknown-linux-gnu \
+    --features full,safe,optimized
+
+# -----------------------------
+# Build Stage - WebAssembly
+# -----------------------------
+FROM base AS build-wasm
+
+WORKDIR /build
+
+COPY --from=deps /build/target /build/target
+COPY src/ ./src/
+COPY Cargo.toml Cargo.lock* ./
+
+RUN cargo build --release --locked \
+    --target wasm32-wasi \
+    --features full,safe
+
+# -----------------------------
+# Build Stage - Musl (Static)
+# -----------------------------
+FROM base AS build-musl
+
+WORKDIR /build
+
+COPY --from=deps /build/target /build/target
+COPY src/ ./src/
+COPY Cargo.toml Cargo.lock* ./
+
+RUN cargo build --release --locked \
+    --target x86_64-unknown-linux-musl \
+    --features full,safe,optimized
+
+# -----------------------------
+# Runtime Base
+# -----------------------------
+FROM debian:bookworm-slim AS runtime
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates \
+    libssl3 \
+    && rm -rf /var/lib/apt/lists/* \
+    && useradd -m -u 1000 -s /bin/bash sbmumc
+
+WORKDIR /app
+
+# -----------------------------
+# Final Image Assembly
+# -----------------------------
+FROM runtime AS final-amd64
+COPY --from=build-amd64 /build/target/x86_64-unknown-linux-gnu/release/sbmumc /app/sbmumc
+LABEL arch="amd64"
+
+FROM runtime AS final-arm64
+COPY --from=build-arm64 /build/target/aarch64-unknown-linux-gnu/release/sbmumc /app/sbmumc
+LABEL arch="arm64"
+
+FROM runtime AS final-arm
+COPY --from=build-arm /build/target/armv7-unknown-linux-gnueabihf/release/sbmumc /app/sbmumc
+LABEL arch="arm"
+
+FROM runtime AS final-riscv64
+COPY --from=build-riscv64 /build/target/riscv64gc-unknown-linux-gnu/release/sbmumc /app/sbmumc
+LABEL arch="riscv64"
+
+FROM alpine:3.19 AS final-wasm
+RUN apk add --no-cache ca-certificates wasmtime
+COPY --from=build-wasm /build/target/wasm32-wasi/release/sbmumc.wasm /app/sbmumc.wasm
+COPY --from=build-wasm /build/target/wasm32-wasi/release/sbmumc.wasm /app/sbmumc.wasm
+ENTRYPOINT ["wasmtime", "/app/sbmumc.wasm"]
+LABEL arch="wasm"
+
+FROM scratch AS final-musl
+COPY --from=build-musl /build/target/x86_64-unknown-linux-musl/release/sbmumc /app/sbmumc
+ENTRYPOINT ["/app/sbmumc"]
+LABEL arch="musl"
+
+# Default target
+FROM final-amd64 AS default
+
+RUN chown -R sbmumc:sbmumc /app
+
+USER sbmumc
+
+ENV SBMUMC_HOME=/app \
+    SBMUMC_DATA=/app/data \
+    RUST_LOG=info
+
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:8080/health || exit 1
+
+EXPOSE 8080 8081 8082 8083
+
+ENTRYPOINT ["/app/sbmumc"]

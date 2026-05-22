@@ -1,0 +1,159 @@
+# ============================================================
+# SBMUMC Helm Chart - Universal Cloud Deployment
+# Supports: AWS EKS, GCP GKE, Azure AKS, on-premise
+# ============================================================
+
+apiVersion: v2
+name: sbmumc
+description: SBMUMC - Universal Meta-Compiler Helm Chart
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+keywords:
+  - meta-compiler
+  - agi
+  - universal
+  - code-generation
+maintainers:
+  - name: Samuel Benwellonedge Mukandara
+    email: sbmumc@example.com
+
+---
+# values.yaml
+
+image:
+  repository: ghcr.io/benwellonedge28/sbmumc
+  tag: "0.1.0"
+  pullPolicy: IfNotPresent
+  pullSecrets: []
+
+replicaCount: 3
+
+service:
+  type: LoadBalancer
+  ports:
+    http: 80
+    api: 8081
+    metrics: 8082
+    grpc: 8083
+  annotations: {}
+
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+  hosts:
+    - host: sbmumc.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+          service: http
+          port: 80
+  tls:
+    - secretName: sbmumc-tls
+      hosts:
+        - sbmumc.example.com
+
+resources:
+  requests:
+    cpu: 500m
+    memory: 1Gi
+  limits:
+    cpu: 4
+    memory: 8Gi
+
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 70
+  targetMemoryUtilizationPercentage: 80
+
+persistence:
+  enabled: true
+  storageClass: standard
+  size: 10Gi
+  accessMode: ReadWriteOnce
+
+security:
+  enabled: true
+  runAsNonRoot: true
+  runAsUser: 1000
+  fsGroup: 1000
+
+monitoring:
+  enabled: true
+  prometheus:
+    enabled: true
+    serviceMonitor:
+      enabled: true
+      interval: 30s
+  grafana:
+    enabled: true
+    dashboard:
+      enabled: true
+
+# Cloud-specific configurations
+cloud:
+  provider: auto  # auto, aws, gcp, azure
+  aws:
+    region: us-east-1
+    efs:
+      enabled: false
+      filesystemId: ""
+    rds:
+      enabled: false
+      instanceClass: db.t3.medium
+      allocatedStorage: 20
+    elasticache:
+      enabled: false
+      nodeType: cache.t3.medium
+      numCacheNodes: 1
+  gcp:
+    region: us-central1
+    cloudSql:
+      enabled: false
+      instance: ""
+      database: sbmumc
+    memoryStore:
+      enabled: false
+      tier: basic
+  azure:
+    region: eastus
+    sqlDatabase:
+      enabled: false
+      tier: Basic
+      maxSize: 2GB
+    cache:
+      enabled: false
+      sku: Basic
+
+config:
+  RUST_LOG: info
+  SERVER_PORT: "8080"
+  API_PORT: "8081"
+  METRICS_PORT: "8082"
+  GRPC_PORT: "8083"
+  SBMUMC_MODE: production
+
+secrets:
+  database_url: ""
+  redis_url: ""
+  sbmumc_secret: ""
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity:
+  podAntiAffinity:
+    preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 100
+        podAffinityTerm:
+          labelSelector:
+            matchLabels:
+              app: sbmumc
+          topologyKey: kubernetes.io/hostname

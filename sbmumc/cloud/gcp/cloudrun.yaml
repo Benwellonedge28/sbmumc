@@ -1,0 +1,164 @@
+# ============================================================
+# GCP Cloud Run Deployment Configuration
+# ============================================================
+
+# Cloud Run Service - Main
+apiVersion: run.googleapis.com/v1
+kind: Service
+metadata:
+  name: sbmumc
+  annotations:
+    run.googleapis.com/ingress: all
+  labels:
+    app: sbmumc
+    component: meta-compiler
+spec:
+  template:
+    metadata:
+      annotations:
+        autoscaling.knative.dev/minScale: "2"
+        autoscaling.knative.dev/maxScale: "10"
+        run.googleapis.com/execution-environment: gen2
+    spec:
+      containerConcurrency: 80
+      timeoutSeconds: 300
+      containers:
+        - image: ghcr.io/benwellonedge28/sbmumc:0.1.0
+          name: sbmumc
+          ports:
+            - name: http1
+              containerPort: 8080
+            - name: http2
+              containerPort: 8081
+            - name: metrics
+              containerPort: 8082
+            - name: grpc
+              containerPort: 8083
+          env:
+            - name: RUST_LOG
+              value: info
+            - name: SBMUMC_MODE
+              value: production
+            - name: SBMUMC_HOME
+              value: /app
+            - name: SBMUMC_DATA
+              value: /app/data
+          resources:
+            limits:
+              cpu: "4"
+              memory: 8Gi
+            requests:
+              cpu: "1"
+              memory: 2Gi
+          startupProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            failureThreshold: 30
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            periodSeconds: 30
+            failureThreshold: 3
+          volumeMounts:
+            - name: sbmumc-data
+              mountPath: /app/data
+      volumes:
+        - name: sbmumc-data
+          persistentVolumeClaim:
+            claimName: sbmumc-data
+
+---
+# Cloud SQL Instance
+apiVersion: sql.cnrm.cloud.google.com/v1beta1
+kind: SQLInstance
+metadata:
+  name: sbmumc-postgres
+spec:
+  region: us-central1
+  databaseVersion: POSTGRES_16
+  settings:
+    tier: db-t3-medium
+    ipConfiguration:
+      authorizedNetworks:
+        - name: default
+          value: 0.0.0.0/0
+    backupConfiguration:
+      enabled: true
+      startTime: "03:00"
+    maintenanceWindow:
+      day: 7
+      hour: 4
+
+---
+# Cloud Memorystore (Redis)
+apiVersion: memcache.cnrm.cloud.google.com/v1beta1
+kind: MemorystoreInstance
+metadata:
+  name: sbmumc-redis
+spec:
+  region: us-central1
+  tier: BASIC
+  memorySizeGb: 2
+
+---
+# VPC Connector
+apiVersion: compute.cnrm.cloud.google.com/v1beta1
+kind: ComputeNetwork
+metadata:
+  name: sbmumc-vpc
+spec:
+  autoCreateSubnetworks: false
+
+---
+# Secret Manager
+apiVersion: secretmanager.cnrm.cloud.google.com/v1beta1
+kind: SecretManagerSecret
+metadata:
+  name: sbmumc-secret
+spec:
+  replication:
+    auto: {}
+
+---
+# Cloud Armor (Security)
+apiVersion: compute.cnrm.cloud.google.com/v1beta1
+kind: ComputeSecurityPolicy
+metadata:
+  name: sbmumc-security-policy
+spec:
+  description: "SBMUMC Cloud Armor Security Policy"
+  rules:
+    - action: deny(403)
+      description: "Block common attacks"
+      match:
+        expr:
+          expression: "evaluatePreconfiguredExpr('sqli-v33-stable')"
+    - action: deny(403)
+      description: "Block XSS"
+      match:
+        expr:
+          expression: "evaluatePreconfiguredExpr('xss-v33-stable')"
+
+---
+# Service Account
+apiVersion: iam.cnrm.cloud.google.com/v1beta1
+kind: IAMServiceAccount
+metadata:
+  name: sbmumc-sa
+spec:
+  displayName: "SBMUMC Service Account"
+
+---
+# IAM Policy
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: sbmumc-viewer
+subjects:
+  - apiGroup: rbac.authorization.k8s.io
+    kind: User
+    name: user@example.com

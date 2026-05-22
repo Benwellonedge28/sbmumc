@@ -1,0 +1,278 @@
+# ============================================================
+# SBMUMC Docker Compose - Universal Multi-Platform
+# Supports: AMD64, ARM64, RISC-V, local and cloud
+# ============================================================
+
+services:
+  # Main SBMUMC Service
+  sbmumc:
+    build:
+      context: .
+      dockerfile: Dockerfile.multiplatform
+      target: default
+    image: ${REGISTRY:-ghcr.io/benwellonedge28}/sbmumc:${VERSION:-0.1.0}
+    container_name: sbmumc
+    restart: unless-stopped
+    ports:
+      - "${SERVER_PORT:-8080}:8080"
+      - "${API_PORT:-8081}:8081"
+      - "${METRICS_PORT:-8082}:8082"
+      - "${GRPC_PORT:-8083}:8083"
+    environment:
+      - SBMUMC_HOME=/app
+      - SBMUMC_DATA=/app/data
+      - SBMUMC_LOGS=/app/logs
+      - RUST_LOG=${RUST_LOG:-info}
+      - RUST_BACKTRACE=1
+      - SERVER_PORT=8080
+      - SERVER_HOST=0.0.0.0
+      - API_PORT=8081
+      - METRICS_PORT=8082
+      - GRPC_PORT=8083
+      - DATABASE_URL=${DATABASE_URL:-}
+      - REDIS_URL=${REDIS_URL:-}
+      - SBMUMC_SECRET=${SBMUMC_SECRET:-}
+    volumes:
+      - sbmumc-data:/app/data
+      - sbmumc-logs:/app/logs
+      - sbmumc-config:/app/config
+      - sbmumc-plugins:/app/plugins
+      - sbmumc-cache:/app/cache
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          cpus: '4'
+          memory: 8G
+        reservations:
+          cpus: '1'
+          memory: 2G
+    networks:
+      - sbmumc-network
+
+  # Development Service
+  sbmumc-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runtime-dev
+    image: ${REGISTRY:-ghcr.io/benwellonedge28}/sbmumc-dev:${VERSION:-0.1.0}
+    container_name: sbmumc-dev
+    profiles:
+      - dev
+    ports:
+      - "${SERVER_PORT:-8080}:8080"
+      - "${API_PORT:-8081}:8081"
+      - "${METRICS_PORT:-8082}:8082"
+      - "${GRPC_PORT:-8083}:8083"
+      - "${DEBUG_PORT:-9090}:9090"
+    environment:
+      - RUST_LOG=debug
+      - RUST_BACKTRACE=full
+      - SBMUMC_DEV=1
+      - DEBUG=1
+    volumes:
+      - ./src:/app/src
+      - ./config:/app/config
+      - sbmumc-data:/app/data
+    command: tail -f /dev/null
+    networks:
+      - sbmumc-network
+
+  # Minimal Service (Alpine)
+  sbmumc-minimal:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runtime-minimal
+    image: ${REGISTRY:-ghcr.io/benwellonedge28}/sbmumc-minimal:${VERSION:-0.1.0}
+    container_name: sbmumc-minimal
+    profiles:
+      - minimal
+    ports:
+      - "${SERVER_PORT:-8080}:8080"
+    environment:
+      - RUST_LOG=warn
+      - SBMUMC_MODE=minimal
+    volumes:
+      - sbmumc-data:/app/data
+    networks:
+      - sbmumc-network
+
+  # Database (PostgreSQL)
+  postgres:
+    image: postgres:16-alpine
+    container_name: sbmumc-postgres
+    restart: unless-stopped
+    environment:
+      - POSTGRES_DB=sbmumc
+      - POSTGRES_USER=sbmumc
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-sbmumc123}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./config/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sbmumc"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - sbmumc-network
+
+  # Cache (Redis)
+  redis:
+    image: redis:7-alpine
+    container_name: sbmumc-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes --maxmemory 2gb --maxmemory-policy allkeys-lru
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - sbmumc-network
+
+  # Prometheus Metrics
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: sbmumc-prometheus
+    restart: unless-stopped
+    profiles:
+      - monitoring
+    ports:
+      - "${PROMETHEUS_PORT:-9090}:9090"
+    volumes:
+      - ./config/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus-data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.enable-lifecycle'
+    networks:
+      - sbmumc-network
+
+  # Grafana Dashboard
+  grafana:
+    image: grafana/grafana:latest
+    container_name: sbmumc-grafana
+    restart: unless-stopped
+    profiles:
+      - monitoring
+    ports:
+      - "${GRAFANA_PORT:-3000}:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin123}
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./config/grafana/provisioning:/etc/grafana/provisioning
+    networks:
+      - sbmumc-network
+
+  # Jaeger Distributed Tracing
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    container_name: sbmumc-jaeger
+    restart: unless-stopped
+    profiles:
+      - tracing
+    ports:
+      - "${JAEGER_PORT:-16686}:16686"
+      - "${JAEGER_COLLECTOR:-14268}:14268"
+      - "${JAEGER_AGENT:-6831}:6831/udp"
+    environment:
+      - COLLECTOR_ZIPKIN_HOST_PORT=:9411
+    volumes:
+      - jaeger-data:/tmp
+    networks:
+      - sbmumc-network
+
+  # Nginx Reverse Proxy
+  nginx:
+    image: nginx:alpine
+    container_name: sbmumc-nginx
+    restart: unless-stopped
+    profiles:
+      - proxy
+    ports:
+      - "${HTTP_PORT:-80}:80"
+      - "${HTTPS_PORT:-443}:443"
+    volumes:
+      - ./config/nginx/nginx.conf:/etc/nginx/nginx.conf
+      - ./config/nginx/conf.d:/etc/nginx/conf.d
+      - nginx-logs:/var/log/nginx
+      - ./config/ssl:/etc/ssl/certs
+    depends_on:
+      - sbmumc
+    networks:
+      - sbmumc-network
+
+  # Traefik Reverse Proxy (alternative)
+  traefik:
+    image: traefik:v3.0
+    container_name: sbmumc-traefik
+    restart: unless-stopped
+    profiles:
+      - traefik
+    command:
+      - --api.insecure=true
+      - --providers.docker=true
+      - --providers.docker.exposedbydefault=false
+      - --entrypoints.web.address=:80
+      - --entrypoints.websecure.address=:443
+    ports:
+      - "${HTTP_PORT:-80}:80"
+      - "${HTTPS_PORT:-443}:443"
+      - "${TRAEFIK_DASHBOARD:-8080}:8080"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - traefik-logs:/var/log/traefik
+      - ./config/traefik:/etc/traefik
+    networks:
+      - sbmumc-network
+
+# Networks
+networks:
+  sbmumc-network:
+    driver: bridge
+    name: sbmumc-network
+
+# Volumes
+volumes:
+  sbmumc-data:
+    name: sbmumc-data
+  sbmumc-logs:
+    name: sbmumc-logs
+  sbmumc-config:
+    name: sbmumc-config
+  sbmumc-plugins:
+    name: sbmumc-plugins
+  sbmumc-cache:
+    name: sbmumc-cache
+  postgres-data:
+    name: sbmumc-postgres-data
+  redis-data:
+    name: sbmumc-redis-data
+  prometheus-data:
+    name: sbmumc-prometheus-data
+  grafana-data:
+    name: sbmumc-grafana-data
+  jaeger-data:
+    name: sbmumc-jaeger-data
+  nginx-logs:
+    name: sbmumc-nginx-logs
+  traefik-logs:
+    name: sbmumc-traefik-logs

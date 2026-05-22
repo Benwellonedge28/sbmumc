@@ -1,0 +1,410 @@
+# ============================================================
+# SBMUMC Kubernetes Deployment - Universal
+# Supports: EKS, GKE, AKS, K3s, MicroK8s, bare-metal
+# ============================================================
+
+---
+# Namespace
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: sbmumc
+  labels:
+    name: sbmumc
+    environment: production
+
+---
+# ConfigMap
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: sbmumc-config
+  namespace: sbmumc
+data:
+  RUST_LOG: "info"
+  SERVER_PORT: "8080"
+  API_PORT: "8081"
+  METRICS_PORT: "8082"
+  GRPC_PORT: "8083"
+  SBMUMC_HOME: "/app"
+  SBMUMC_DATA: "/app/data"
+  SBMUMC_MODE: "production"
+
+---
+# Secret
+apiVersion: v1
+kind: Secret
+metadata:
+  name: sbmumc-secrets
+  namespace: sbmumc
+type: Opaque
+stringData:
+  database-url: "postgresql://sbmumc:password@postgres:5432/sbmumc"
+  redis-url: "redis://redis:6379"
+  sbmumc-secret: "change-me-in-production"
+
+---
+# ServiceAccount
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: sbmumc
+  namespace: sbmumc
+
+---
+# Role
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: sbmumc
+  namespace: sbmumc
+rules:
+  - apiGroups: [""]
+    resources: ["configmaps", "secrets", "services"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["coordination.k8s.io"]
+    resources: ["leases"]
+    verbs: ["get", "create", "update"]
+
+---
+# RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: sbmumc
+  namespace: sbmumc
+subjects:
+  - kind: ServiceAccount
+    name: sbmumc
+    namespace: sbmumc
+roleRef:
+  kind: Role
+  name: sbmumc
+  apiGroup: rbac.authorization.k8s.io
+
+---
+# PersistentVolumeClaim
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: sbmumc-data
+  namespace: sbmumc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: standard
+  resources:
+    requests:
+      storage: 10Gi
+
+---
+# Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sbmumc
+  namespace: sbmumc
+  labels:
+    app: sbmumc
+    component: meta-compiler
+    version: "0.1.0"
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: sbmumc
+  template:
+    metadata:
+      labels:
+        app: sbmumc
+        component: meta-compiler
+        version: "0.1.0"
+    spec:
+      serviceAccountName: sbmumc
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+      containers:
+        - name: sbmumc
+          image: ghcr.io/benwellonedge28/sbmumc:0.1.0
+          imagePullPolicy: Always
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+            - name: api
+              containerPort: 8081
+              protocol: TCP
+            - name: metrics
+              containerPort: 8082
+              protocol: TCP
+            - name: grpc
+              containerPort: 8083
+              protocol: TCP
+          env:
+            - name: SBMUMC_HOME
+              valueFrom:
+                configMapKeyRef:
+                  name: sbmumc-config
+                  key: SBMUMC_HOME
+            - name: SBMUMC_DATA
+              valueFrom:
+                configMapKeyRef:
+                  name: sbmumc-config
+                  key: SBMUMC_DATA
+            - name: RUST_LOG
+              valueFrom:
+                configMapKeyRef:
+                  name: sbmumc-config
+                  key: RUST_LOG
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: sbmumc-secrets
+                  key: database-url
+            - name: REDIS_URL
+              valueFrom:
+                secretKeyRef:
+                  name: sbmumc-secrets
+                  key: redis-url
+          resources:
+            requests:
+              cpu: 500m
+              memory: 1Gi
+            limits:
+              cpu: 4
+              memory: 8Gi
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+          startupProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 30
+          volumeMounts:
+            - name: sbmumc-data
+              mountPath: /app/data
+            - name: sbmumc-logs
+              mountPath: /app/logs
+      volumes:
+        - name: sbmumc-data
+          persistentVolumeClaim:
+            claimName: sbmumc-data
+        - name: sbmumc-logs
+          emptyDir: {}
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    app: sbmumc
+                topologyKey: kubernetes.io/hostname
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 10
+              preference:
+                matchExpressions:
+                  - key: workload-type
+                    operator: In
+                    values:
+                      - compute
+      tolerations:
+        - key: "node.kubernetes.io/disk-pressure"
+          operator: "Exists"
+          effect: "NoSchedule"
+
+---
+# Service - ClusterIP
+apiVersion: v1
+kind: Service
+metadata:
+  name: sbmumc-cluster
+  namespace: sbmumc
+  labels:
+    app: sbmumc
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+    - name: api
+      port: 8081
+      targetPort: api
+    - name: metrics
+      port: 8082
+      targetPort: metrics
+    - name: grpc
+      port: 8083
+      targetPort: grpc
+  selector:
+    app: sbmumc
+
+---
+# Service - LoadBalancer
+apiVersion: v1
+kind: Service
+metadata:
+  name: sbmumc-lb
+  namespace: sbmumc
+  labels:
+    app: sbmumc
+  annotations:
+    # AWS ALB
+    service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
+    service.beta.kubernetes.io/aws-load-balancer-cross-zone-load-balancing-enabled: "true"
+    # GCP Cloud Load Balancing
+    cloud.google.com/load-balancer-type: "External"
+    # Azure
+    service.beta.kubernetes.io/azure-load-balancer-resource-group: "sbmumc-rg"
+spec:
+  type: LoadBalancer
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+    - name: https
+      port: 443
+      targetPort: http
+  selector:
+    app: sbmumc
+
+---
+# Service - NodePort
+apiVersion: v1
+kind: Service
+metadata:
+  name: sbmumc-nodeport
+  namespace: sbmumc
+  labels:
+    app: sbmumc
+spec:
+  type: NodePort
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8080
+      nodePort: 30080
+    - name: api
+      port: 8081
+      targetPort: 8081
+      nodePort: 30081
+  selector:
+    app: sbmumc
+
+---
+# HorizontalPodAutoscaler
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: sbmumc-hpa
+  namespace: sbmumc
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: sbmumc
+  minReplicas: 2
+  maxReplicas: 10
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 80
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+        - type: Percent
+          value: 10
+          periodSeconds: 60
+    scaleUp:
+      stabilizationWindowSeconds: 0
+      policies:
+        - type: Percent
+          value: 100
+          periodSeconds: 15
+        - type: pods
+          value: 4
+          periodSeconds: 15
+      selectPolicy: Max
+
+---
+# PodDisruptionBudget
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: sbmumc-pdb
+  namespace: sbmumc
+spec:
+  minAvailable: 2
+  selector:
+    matchLabels:
+      app: sbmumc
+
+---
+# NetworkPolicy
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: sbmumc-network-policy
+  namespace: sbmumc
+spec:
+  podSelector:
+    matchLabels:
+      app: sbmumc
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              name: ingress-nginx
+      ports:
+        - protocol: TCP
+          port: 8080
+  egress:
+    - to:
+        - podSelector:
+            matchLabels:
+              app: redis
+      ports:
+        - protocol: TCP
+          port: 6379
+    - to:
+        - podSelector:
+            matchLabels:
+              app: postgres
+      ports:
+        - protocol: TCP
+          port: 5432
