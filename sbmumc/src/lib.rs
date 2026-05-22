@@ -936,6 +936,17 @@ pub mod hdl_support;
 pub mod programming_language_development;
 
 // ============================================================================
+// UNIVERSAL META-COMPILER MODULES
+// ============================================================================
+
+pub mod universal_compilation_engine;
+pub mod neural_compilation_optimizer;
+pub mod security_verification;
+pub mod polyglot_language_compilation;
+pub mod autonomous_self_tuning;
+pub mod production_ready;
+
+// ============================================================================
 // TIME & SPACETIME MODULES (Files 476-500)
 // ============================================================================
 
