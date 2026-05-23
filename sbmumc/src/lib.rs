@@ -936,6 +936,14 @@ pub mod hdl_support;
 pub mod programming_language_development;
 
 // ============================================================================
+// BINARY COMPILATION & QUANTUM MODULES
+// ============================================================================
+
+pub mod binary_compilation;
+pub mod quantum_computing;
+pub mod hdl_synthesis;
+
+// ============================================================================
 // UNIVERSAL META-COMPILER MODULES
 // ============================================================================
 
