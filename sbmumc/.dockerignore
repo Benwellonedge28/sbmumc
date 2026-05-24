@@ -1,0 +1,37 @@
+# Dependencies
+**/target
+**/.cargo
+**/Cargo.lock
+
+# Development files
+**/.git
+**/.github
+**/.vscode
+**/.idea
+
+# Documentation
+**/*.md
+**/docs
+
+# Test files
+**/tests
+**/benches
+**/*_tests.rs
+**/*test*.rs
+
+# Examples
+**/examples
+
+# Build artifacts
+**/dist
+**/build
+**/.cache
+
+# OS files
+**/.DS_Store
+**/Thumbs.db
+
+# IDE files
+**/*.swp
+**/*.swo
+**/*~

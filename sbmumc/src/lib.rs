@@ -936,6 +936,56 @@ pub mod hdl_support;
 pub mod programming_language_development;
 
 // ============================================================================
+// GENERATOR MODULES
+// ============================================================================
+
+pub mod library_generator;
+pub mod test_generator;
+pub mod code_generator;
+pub mod toolchain_generator;
+pub mod universal_features;
+
+// ============================================================================
+// GENERATOR MODULES RE-EXPORTS
+// ============================================================================
+
+// Library Generator
+pub use library_generator::{
+    LibraryGenerator, LibrarySpec, ModuleSpec, FunctionSpec,
+    ProductionLibraries, StandardLibrary, ExternalLibrary,
+};
+
+// Test Generator
+pub use test_generator::{
+    TestGenerator, CompileTimeTester, RuntimeTester, PropertyBasedTester,
+    MutationTester, FuzzTester, BenchmarkTester,
+    TestSpec, TestFramework, TestConfig,
+};
+
+// Code Generator
+pub use code_generator::{
+    CodeGenerator, CodeSpecification, CodeGeneratorConfig,
+    GeneratedCode, SynthesisError,
+    HighLevelSynthesizer, DomainSpecificGenerator, CodeTransformer,
+};
+
+// Toolchain Generator
+pub use toolchain_generator::{
+    ToolchainGenerator, ToolchainConfig, ToolchainComponent,
+    CompilerGenerator, DebuggerGenerator, BuildSystemGenerator,
+    LspServerGenerator, PackageManagerGenerator, ReplGenerator,
+    LanguageSpecification, CompilationTarget,
+};
+
+// Universal Features
+pub use universal_features::{
+    UniversalFeatures, Transpiler, AbstractInterpreter, ProgramSynthesizer,
+    FormalVerifier, AdaptiveCompiler, CrossParadigmEngine,
+    MetaCompiler, IncrementalCompiler, ParallelCompiler,
+    CloudCompiler, InteroperabilityEngine,
+};
+
+// ============================================================================
 // BINARY COMPILATION & QUANTUM MODULES
 // ============================================================================
 

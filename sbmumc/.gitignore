@@ -28,3 +28,10 @@ config/local/
 
 # Binary compilation module
 !src/binary_compilation/
+
+# Generator modules
+!src/library_generator/
+!src/test_generator/
+!src/code_generator/
+!src/toolchain_generator/
+!src/universal_features/
