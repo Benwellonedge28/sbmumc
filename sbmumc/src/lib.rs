@@ -772,6 +772,67 @@ pub use programming_language_development::{
 };
 
 // ============================================================================
+// UNIVERSAL COMPILER FRAMEWORK MODULES
+// ============================================================================
+
+// Quantum compilation - compile quantum circuits and algorithms
+pub mod quantum_compilation;
+pub use quantum_compilation::{
+    QuantumCompiler, QuantumBackend, QuantumCircuit, QuantumGate,
+    QuantumBackendInfo, CompiledQuantumCircuit, QuantumExecutionResult,
+    QuantumSimulator, QuantumCompilationManager, QuantumAlgorithmLibrary,
+    GateInstance, Measurement, OptimizationLevel as QuantumOptLevel,
+    OptimizationStrategy, ErrorMitigationMethod, LayoutMethod, RoutingMethod,
+};
+
+// Advanced optimization - supremely advanced compilation optimization
+pub mod advanced_optimization;
+pub use advanced_optimization::{
+    OptimizationEngine, OptimizationConfig, OptimizationStats,
+    OptimizationRecord, OptimizationPattern, OptimizationSnapshot,
+    OptimizationPipeline, OptimizationPass as OptPass, OptimizationLevel,
+    OptimizationStrategy, Architecture as OptArch, IntermediateRepresentation,
+    Instruction, Function, Variable, FunctionId, BasicBlock,
+    SimdOperation, SecurityCheck, LoopCondition,
+};
+
+// Meta compilation - self-referential meta-compilation system
+pub mod meta_compilation;
+pub use meta_compilation::{
+    MetaCompiler, LanguageSpec as MetaLanguageSpec, Grammar as MetaGrammar,
+    Production, Symbol, SemanticAction, TypeSystem as MetaTypeSystem,
+    TypingRule, Type as MetaType, PrimitiveType, CompositeType,
+    GenericType, TypeConstraint, TypeBound, ExistentialType,
+    LanguageFeature, MetaFeatures, MetaIR, MetaInstruction, MetaExpr,
+    ParseTree, Node, Token, TokenKind, AbstractSyntaxTree, Statement,
+    Expr, Scope, Macro,
+};
+
+// Cross-platform compilation - all platforms and architectures
+pub mod cross_platform_compilation;
+pub use cross_platform_compilation::{
+    CrossPlatformCompiler, CrossCompilationPipeline,
+    TargetPlatform, Architecture as CrossArch, iOSDevice,
+    PlatformConfig, Library, Toolchain,
+    WasmModule, WasmSection, WasmExport,
+    EmbeddedCompiler, EmbeddedOptimization, EmbeddedBinary,
+    MobileCompiler, MobilePlatform, MobileBinary,
+    CloudCompiler, CloudPlatform, CloudDeployment,
+    PlatformDetector, CompilationResult as XCompilationResult,
+};
+
+// Compilation pipeline - comprehensive compilation pipeline system
+pub mod compilation_pipeline;
+pub use compilation_pipeline::{
+    CompilationPipeline, PipelineConfig, PipelineStage, StageType,
+    StageConfig, PipelineStats, PipelineInput, SourceFile, TargetSpec,
+    CompilationOptions, OptimizationLevel as PipeOptLevel, OutputType,
+    PipelineOutput, PipelineContext, PipelineError, SourceLocation,
+    Artifact, Token as PipeToken, ParseTree as PipeParseTree,
+    SymbolTable, SymbolInfo,
+};
+
+// ============================================================================
 // TRANSCENDENT & FRONTIER CAPABILITIES RE-EXPORTS
 // ============================================================================
 
